@@ -66,9 +66,14 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 `supabase/migrations/` creates the private cache bucket and the `generation_log` table; `supabase functions deploy generate-emoji --no-verify-jwt` deploys the function.
 
-## Ad space
+## Ads
 
-The layout reserves a 300×250 slot under the settings panel on desktop and a 320×100 banner at the bottom on phones, outside the editing flow so ads never push controls around. Set `VITE_AD_SLOTS=show` to see placeholders; drop the ad network's tag into `src/components/AdSlot.tsx`.
+AdSense is set up for publisher `ca-pub-8080930241819022`: the loader script is in `index.html` and `public/ads.txt` authorizes the account. Ads go in 300×250 slots (`src/components/AdSlot.tsx`):
+
+- **Editor**: under the settings panel on desktop, and after the Download button on phones, so it only appears once you've finished editing.
+- **Guides**: one slot inside each guide.
+
+Slots stay empty until an ad unit exists. Create a 300×250 display unit in AdSense and set its id as `VITE_ADSENSE_SLOT` in Netlify's environment variables, then redeploy. On desktop the editor slot always keeps its space so an ad loading never moves the controls; on phones and in guides an unused slot takes no space. `VITE_AD_SLOTS=show` draws placeholders for layout work. Keep AdSense Auto ads off, or at least turn off its anchor and vignette formats, so Google doesn't place extra ads over the editor.
 
 ## Guides, support pages and analytics
 

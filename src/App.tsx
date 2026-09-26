@@ -470,7 +470,7 @@ export default function App() {
             </div>
           </section>
 
-          <AdSlot format="rectangle" />
+          <AdSlot placement="editor" />
         </div>
       </main>
 
@@ -482,8 +482,6 @@ export default function App() {
           </button>
         </div>
       )}
-
-      <AdSlot format="banner" />
 
       <SiteFooter />
     </div>
