@@ -1,4 +1,14 @@
-import { ArrowUp, Download, ImagePlus, LoaderCircle, Sparkles, Upload } from 'lucide-react'
+import {
+  ArrowUp,
+  Download,
+  FlipHorizontal2,
+  ImagePlus,
+  LoaderCircle,
+  RotateCcw,
+  RotateCw,
+  Sparkles,
+  Upload,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
@@ -9,6 +19,7 @@ import { exportGif, exportPng, type ExportResult } from './lib/export'
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_RENDER, loadImage, prepareSource, type Fit, type RenderOptions } from './lib/render'
+import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 
 interface HistoryItem {
   id: number
@@ -47,6 +58,9 @@ export default function App() {
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
   const [trim, setTrim] = useState(true)
+  const [rotation, setRotation] = useState(0)
+  const [flip, setFlip] = useState(false)
+  const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
   const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
@@ -60,8 +74,18 @@ export default function App() {
   const animation = useMemo(() => composeAnimations(motionIds.map(getAnimation)), [motionIds])
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
-  const options: RenderOptions = useMemo(() => ({ fit, padding, background }), [fit, padding, background])
-  const source = useMemo(() => (active ? prepareSource(active.image, trim) : null), [active, trim])
+  const options: RenderOptions = useMemo(
+    () => ({ fit, padding, background, rotation, flip }),
+    [fit, padding, background, rotation, flip],
+  )
+  const prepared = useMemo(() => (active ? prepareSource(active.image, trim) : null), [active, trim])
+  const source = useMemo(() => (prepared ? applyTune(prepared, tune) : null), [prepared, tune])
+  // Quarter turns snap to the nearest 90° and wrap into -180..180.
+  const turn = (dir: 1 | -1) =>
+    setRotation((r) => {
+      const next = Math.round(r / 90) * 90 + dir * 90
+      return next > 180 ? next - 360 : next <= -180 ? next + 360 : next
+    })
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
   const result = exported?.key === exportKey ? exported.result : null
   const exporting = !!source && !result
@@ -84,6 +108,10 @@ export default function App() {
     })
     setActiveId(item.id)
     setName('')
+    // Rotation and tuning belong to the old image; start the new one clean.
+    setRotation(0)
+    setFlip(false)
+    setTune(DEFAULT_TUNE)
   }, [])
 
   const onFile = useCallback(
@@ -397,6 +425,39 @@ export default function App() {
                 />
                 <output>{Math.round(padding * 100)}%</output>
               </label>
+              <label className="setting">
+                <span>Rotate</span>
+                <input
+                  type="range"
+                  min={-180}
+                  max={180}
+                  step={1}
+                  value={rotation}
+                  onChange={(e) => setRotation(Number(e.target.value))}
+                  onDoubleClick={() => setRotation(0)}
+                />
+                <output>{rotation}°</output>
+              </label>
+              <div className="setting">
+                <span>Turn</span>
+                <div className="icon-options">
+                  <button type="button" className="icon-option" onClick={() => turn(-1)} title="Rotate left 90°">
+                    <RotateCcw size={15} />
+                  </button>
+                  <button type="button" className="icon-option" onClick={() => turn(1)} title="Rotate right 90°">
+                    <RotateCw size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-option${flip ? ' is-active' : ''}`}
+                    onClick={() => setFlip((f) => !f)}
+                    aria-pressed={flip}
+                    title="Flip horizontally"
+                  >
+                    <FlipHorizontal2 size={15} />
+                  </button>
+                </div>
+              </div>
               <div className="setting">
                 <span>Background</span>
                 <div className="bg-options">
@@ -425,6 +486,32 @@ export default function App() {
                 <span>Trim empty edges</span>
                 <input type="checkbox" role="switch" checked={trim} onChange={(e) => setTrim(e.target.checked)} />
               </label>
+            </div>
+
+            <div className="group">
+              <div className="group-head">
+                <h2>Tune</h2>
+                {!isNeutral(tune) && (
+                  <button type="button" className="text-button" onClick={() => setTune(DEFAULT_TUNE)}>
+                    Reset
+                  </button>
+                )}
+              </div>
+              {TUNE_CONTROLS.map(({ key, label }) => (
+                <label className="setting" key={key}>
+                  <span>{label}</span>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={tune[key]}
+                    onChange={(e) => setTune((t) => ({ ...t, [key]: Number(e.target.value) }))}
+                    onDoubleClick={() => setTune((t) => ({ ...t, [key]: 0 }))}
+                  />
+                  <output>{tune[key] > 0 ? `+${tune[key]}` : tune[key]}</output>
+                </label>
+              ))}
             </div>
 
             <div className="group export">

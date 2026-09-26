@@ -8,9 +8,27 @@ export interface RenderOptions {
   padding: number
   /** CSS color, or null for a transparent background. */
   background: string | null
+  /** Clockwise rotation of the image in degrees, -180 to 180. */
+  rotation: number
+  /** Mirror the image left to right. */
+  flip: boolean
 }
 
-export const DEFAULT_RENDER: RenderOptions = { fit: 'contain', padding: 0.04, background: null }
+export const DEFAULT_RENDER: RenderOptions = {
+  fit: 'contain',
+  padding: 0.04,
+  background: null,
+  rotation: 0,
+  flip: false,
+}
+
+/** Size of the box a w × h image occupies once rotated by the given degrees. */
+export function rotatedSize(w: number, h: number, degrees: number): { w: number; h: number } {
+  const r = (degrees * Math.PI) / 180
+  const cos = Math.abs(Math.cos(r))
+  const sin = Math.abs(Math.sin(r))
+  return { w: w * cos + h * sin, h: w * sin + h * cos }
+}
 
 /** Largest side kept after loading. Bigger sources only slow down per-frame drawing. */
 const WORKING_SIZE = 512
@@ -130,10 +148,10 @@ export function drawFrame(
     ctx.fillRect(0, 0, size, size)
   }
   const avail = size * (1 - opts.padding * 2) * inset
+  // Fit the rotated image, so turning it never crops a corner.
+  const box = rotatedSize(source.width, source.height, opts.rotation)
   const fitScale =
-    opts.fit === 'cover'
-      ? Math.max(avail / source.width, avail / source.height)
-      : Math.min(avail / source.width, avail / source.height)
+    opts.fit === 'cover' ? Math.max(avail / box.w, avail / box.h) : Math.min(avail / box.w, avail / box.h)
   const dw = source.width * fitScale
   const dh = source.height * fitScale
 
@@ -146,12 +164,44 @@ export function drawFrame(
   ctx.translate(size / 2 + (transform.x ?? 0) * size, size / 2 + (transform.y ?? 0) * size)
   if (transform.rotate) ctx.rotate(transform.rotate)
   ctx.scale(transform.scaleX ?? 1, transform.scaleY ?? 1)
-  if (transform.hue) ctx.filter = `hue-rotate(${Math.round(transform.hue)}deg) saturate(1.4)`
+  if (opts.rotation) ctx.rotate((opts.rotation * Math.PI) / 180)
+  if (opts.flip) ctx.scale(-1, 1)
+  const image = transform.hue === undefined ? source : tinted(source, transform.hue)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh)
+  ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh)
   ctx.restore()
 }
+
+let tintCanvas: Canvas2D | null = null
+
+/**
+ * The source washed with a color, for Party. A tint (rather than a hue
+ * rotation) also colors black, white and grey images, and it doesn't rely on
+ * canvas filters, which some browsers ignore.
+ */
+function tinted(source: Canvas2D, hue: number): Canvas2D {
+  tintCanvas ??= makeCanvas(1, 1)
+  const c = tintCanvas
+  if (c.width !== source.width || c.height !== source.height) {
+    c.width = source.width
+    c.height = source.height
+  }
+  const t = ctx2d(c)
+  t.globalCompositeOperation = 'source-over'
+  t.globalAlpha = 1
+  t.clearRect(0, 0, c.width, c.height)
+  t.drawImage(source, 0, 0)
+  t.globalCompositeOperation = 'source-atop'
+  t.globalAlpha = TINT_STRENGTH
+  t.fillStyle = `hsl(${Math.round(((hue % 360) + 360) % 360)}, 100%, 55%)`
+  t.fillRect(0, 0, c.width, c.height)
+  t.globalCompositeOperation = 'source-over'
+  t.globalAlpha = 1
+  return c
+}
+
+const TINT_STRENGTH = 0.5
 
 export { makeCanvas, ctx2d }
 

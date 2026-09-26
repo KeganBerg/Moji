@@ -10,7 +10,7 @@ export interface FrameTransform {
   /** Offsets as a fraction of the emoji size. */
   x?: number
   y?: number
-  /** Degrees of hue rotation. */
+  /** Party color, as a hue in degrees. Undefined means the image keeps its own colors. */
   hue?: number
 }
 
@@ -119,17 +119,23 @@ export function composeAnimations(list: Animation[]): Animation {
     frames: Math.max(...parts.map(({ a, cycles }) => a.frames * cycles)),
     inset: Math.min(...moving.map((a) => a.inset)),
     at: (t) => {
-      const out = { rotate: 0, scaleX: 1, scaleY: 1, x: 0, y: 0, hue: 0 }
+      let rotate = 0,
+        scaleX = 1,
+        scaleY = 1,
+        x = 0,
+        y = 0
+      // Only color-cycling motions set hue, so "no hue" stays distinguishable from 0°.
+      let hue: number | undefined
       for (const { a, cycles } of parts) {
         const f = a.at((t * cycles) % 1)
-        out.rotate += f.rotate ?? 0
-        out.scaleX *= f.scaleX ?? 1
-        out.scaleY *= f.scaleY ?? 1
-        out.x += f.x ?? 0
-        out.y += f.y ?? 0
-        out.hue += f.hue ?? 0
+        rotate += f.rotate ?? 0
+        scaleX *= f.scaleX ?? 1
+        scaleY *= f.scaleY ?? 1
+        x += f.x ?? 0
+        y += f.y ?? 0
+        if (f.hue !== undefined) hue = (hue ?? 0) + f.hue
       }
-      return out
+      return { rotate, scaleX, scaleY, x, y, hue }
     },
   }
 }

@@ -673,6 +673,52 @@ input[type='range'] {
   grid-column: 2 / 4;
 }
 
+.icon-options {
+  display: flex;
+  gap: 6px;
+  grid-column: 2 / 4;
+}
+
+.icon-option {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.icon-option:hover {
+  color: var(--text);
+}
+
+.icon-option.is-active {
+  border-color: var(--text);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: var(--text);
+}
+
 .swatch {
   position: relative;
   width: 28px;
