@@ -4,6 +4,7 @@ import { AdSlot } from './components/AdSlot'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
 import { Segmented } from './components/Segmented'
+import { SiteFooter, SiteHeader } from './components/SiteChrome'
 import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
@@ -170,18 +171,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Moji Locker home">
-          <svg viewBox="0 0 32 32" aria-hidden>
-            <rect width="32" height="32" rx="9" />
-            <circle cx="11.5" cy="13" r="2.2" />
-            <circle cx="20.5" cy="13" r="2.2" />
-            <path d="M10 19.5c1.6 2.6 3.8 3.9 6 3.9s4.4-1.3 6-3.9" />
-          </svg>
-          Moji Locker
-        </a>
-        <p className="topbar-tag">Custom emoji, sized right for Slack and Discord.</p>
-      </header>
+      <SiteHeader />
 
       <main className="workspace">
         <section
@@ -495,9 +485,7 @@ export default function App() {
 
       <AdSlot format="banner" />
 
-      <footer className="footer">
-        Images you upload never leave your browser. Descriptions are sent to the image model only when you generate.
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
