@@ -47,7 +47,7 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
   },
   custom: {
     id: 'custom',
-    label: 'Other app',
+    label: 'Custom',
     size: 128,
     maxBytes: 256 * 1024,
     maxFrames: 200,
@@ -64,6 +64,7 @@ export function sanitizeName(raw: string, platform: PlatformId): string {
   } else {
     name = name.replace(/[^a-z0-9_-]/g, '').slice(0, 100)
   }
+  name = name.replace(/^[-_]+|[-_]+$/g, '')
   if (name.length < 2) name = (name + 'emoji').slice(0, 5)
   return name
 }

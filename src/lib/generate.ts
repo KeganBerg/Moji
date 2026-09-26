@@ -1,29 +1,41 @@
-import { supabase } from './supabase'
-
 /**
- * Prompt-to-emoji generation. No image model has been picked yet, so the app
- * ships with a placeholder that draws the prompt as a badge; swap in a real
- * provider by implementing EmojiGenerator and returning it from getGenerator().
+ * Prompt-to-emoji generation.
  *
- * The intended production path is SupabaseFunctionGenerator: the browser calls
- * the `generate-emoji` Edge Function, which holds the provider API key and
- * returns a PNG. See supabase/functions/generate-emoji.
+ * In production the browser calls the `generate-emoji` Supabase Edge Function,
+ * which holds the OpenAI key, caches results and enforces daily limits (see
+ * supabase/functions/generate-emoji). Without Supabase env vars, a local
+ * placeholder draws the prompt as a badge so the rest of the flow still works.
  */
+export const STYLES = [
+  { id: 'flat', label: 'Flat' },
+  { id: '3d', label: '3D' },
+  { id: 'sticker', label: 'Sticker' },
+  { id: 'pixel', label: 'Pixel' },
+  { id: 'hand-drawn', label: 'Sketch' },
+] as const
+
+export type StyleId = (typeof STYLES)[number]['id']
+
 export interface GenerateRequest {
   prompt: string
-  /** Style hint appended to the prompt, e.g. "flat", "3d", "pixel". */
-  style: string
+  style: StyleId
+}
+
+export interface GenerateResult {
+  blob: Blob
+  cached: boolean
+  /** Paid generations left today, when the server reports it. */
+  remaining: number | null
 }
 
 export interface EmojiGenerator {
-  readonly id: string
-  readonly label: string
-  /** Whether the output is a real model image (false for the placeholder). */
   readonly isReal: boolean
-  generate(req: GenerateRequest): Promise<Blob>
+  generate(req: GenerateRequest, signal?: AbortSignal): Promise<GenerateResult>
 }
 
-const BADGE_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#9775fa', '#f783ac']
+export const MAX_PROMPT = 200
+
+const BADGE_COLORS = ['#f25f5c', '#f7a541', '#e9c46a', '#43aa8b', '#4d96ff', '#7b61ff', '#e76fbd']
 
 function hash(s: string): number {
   let h = 0
@@ -31,13 +43,11 @@ function hash(s: string): number {
   return Math.abs(h)
 }
 
-/** Draws the prompt's first emoji (or initials) on a colored circle. Lets the whole flow work before a model is wired up. */
+/** Draws the prompt's first emoji (or initials) on a colored circle. */
 export class PlaceholderGenerator implements EmojiGenerator {
-  readonly id = 'placeholder'
-  readonly label = 'Placeholder (no AI model connected)'
   readonly isReal = false
 
-  async generate({ prompt }: GenerateRequest): Promise<Blob> {
+  async generate({ prompt }: GenerateRequest): Promise<GenerateResult> {
     const size = 512
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = size
@@ -47,7 +57,6 @@ export class PlaceholderGenerator implements EmojiGenerator {
     ctx.beginPath()
     ctx.arc(size / 2, size / 2, size / 2 - 8, 0, Math.PI * 2)
     ctx.fill()
-
     const emoji = text.match(/\p{Extended_Pictographic}/u)?.[0]
     const label =
       emoji ??
@@ -59,31 +68,63 @@ export class PlaceholderGenerator implements EmojiGenerator {
     ctx.fillStyle = '#fff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = `bold ${emoji ? 300 : 220}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`
+    ctx.font = `600 ${emoji ? 300 : 220}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`
     ctx.fillText(label, size / 2, size / 2 + (emoji ? 12 : 8))
-    return new Promise((resolve, reject) =>
+    const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw placeholder'))), 'image/png'),
     )
+    return { blob, cached: false, remaining: null }
   }
 }
 
-/** Calls the generate-emoji Edge Function, which talks to the image model server-side. */
+export class GenerationError extends Error {
+  readonly status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
+/** Calls the generate-emoji Edge Function with the project's publishable key. */
 export class SupabaseFunctionGenerator implements EmojiGenerator {
-  readonly id = 'supabase'
-  readonly label = 'AI (Supabase Edge Function)'
   readonly isReal = true
 
-  async generate(req: GenerateRequest): Promise<Blob> {
-    if (!supabase) throw new Error('Supabase is not configured')
-    const { data, error } = await supabase.functions.invoke('generate-emoji', { body: req })
-    if (error) throw new Error(error.message)
-    if (data instanceof Blob) return data
-    throw new Error('Generator returned an unexpected response')
+  private readonly url: string
+  private readonly key: string
+
+  constructor(url: string, key: string) {
+    this.url = url
+    this.key = key
+  }
+
+  async generate(req: GenerateRequest, signal?: AbortSignal): Promise<GenerateResult> {
+    let res: Response
+    try {
+      res = await fetch(`${this.url}/functions/v1/generate-emoji`, {
+        method: 'POST',
+        headers: { apikey: this.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+        signal,
+      })
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e
+      throw new GenerationError('Could not reach the generator. Check your connection.', 0)
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new GenerationError(body?.error ?? 'Generation failed. Try again.', res.status)
+    }
+    const remaining = res.headers.get('x-moji-remaining')
+    return {
+      blob: await res.blob(),
+      cached: res.headers.get('x-moji-cache') === 'hit',
+      remaining: remaining === null ? null : Number(remaining),
+    }
   }
 }
 
 export function getGenerator(): EmojiGenerator {
-  const choice = import.meta.env.VITE_EMOJI_GENERATOR as string | undefined
-  if (choice === 'supabase' && supabase) return new SupabaseFunctionGenerator()
-  return new PlaceholderGenerator()
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
+  return url && key ? new SupabaseFunctionGenerator(url, key) : new PlaceholderGenerator()
 }

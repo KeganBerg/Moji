@@ -8,6 +8,8 @@ describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
     expect(sanitizeName('Party Parrot!', 'slack')).toBe('party_parrot')
     expect(sanitizeName('thumbs-up', 'slack')).toBe('thumbs-up')
+    expect(sanitizeName('taco sunrise ', 'slack')).toBe('taco_sunrise')
+    expect(sanitizeName('_taco_', 'discord')).toBe('taco')
   })
   it('makes Discord-safe names (no hyphens, 32 max, 2 min)', () => {
     expect(sanitizeName('thumbs-up', 'discord')).toBe('thumbsup')

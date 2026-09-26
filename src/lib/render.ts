@@ -81,6 +81,7 @@ export function prepareSource(img: CanvasImageSource & { width: number; height: 
   const octx = ctx2d(out)
   octx.imageSmoothingQuality = 'high'
   octx.drawImage(current, 0, 0, out.width, out.height)
+  snapAlpha(octx, out.width, out.height)
   if (!trim) return out
 
   const bounds = opaqueBounds(octx.getImageData(0, 0, out.width, out.height).data, out.width, out.height)
@@ -88,6 +89,28 @@ export function prepareSource(img: CanvasImageSource & { width: number; height: 
   const trimmed = makeCanvas(bounds.w, bounds.h)
   ctx2d(trimmed).drawImage(out, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h)
   return trimmed
+}
+
+/**
+ * AI models often return "opaque" pixels at alpha 250-254 and faint haze at
+ * 1-6, which shows up as see-through subjects and grey fringes once scaled.
+ * Snap both ends so edges stay clean.
+ */
+function snapAlpha(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const img = ctx.getImageData(0, 0, w, h)
+  const d = img.data
+  let changed = false
+  for (let i = 3; i < d.length; i += 4) {
+    const a = d[i]
+    if (a >= 250 && a < 255) {
+      d[i] = 255
+      changed = true
+    } else if (a > 0 && a <= 6) {
+      d[i] = 0
+      changed = true
+    }
+  }
+  if (changed) ctx.putImageData(img, 0, 0)
 }
 
 /** Draws one frame of the emoji into ctx at size × size. */
