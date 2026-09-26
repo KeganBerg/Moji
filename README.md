@@ -70,6 +70,10 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 The layout reserves a 300×250 slot under the settings panel on desktop and a 320×100 banner at the bottom on phones, outside the editing flow so ads never push controls around. Set `VITE_AD_SLOTS=show` to see placeholders; drop the ad network's tag into `src/components/AdSlot.tsx`.
 
+## Support pages and analytics
+
+`/faq`, `/privacy` and `/terms` live in `src/pages/InfoPage.tsx`; the footer links to them and to a feedback email. The contact address is `CONTACT_EMAIL` in `src/lib/site.ts`. Set `VITE_CF_ANALYTICS_TOKEN` in Netlify's environment variables to turn on Cloudflare Web Analytics (cookieless); without it nothing loads.
+
 ## Code map
 
 - `src/lib/platforms.ts` platform presets and name rules
