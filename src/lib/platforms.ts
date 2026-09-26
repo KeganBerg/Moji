@@ -38,12 +38,7 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     maxBytes: 256 * 1024,
     maxFrames: 200,
     displaySizes: [22, 48],
-    notes: [
-      '128 × 128 px',
-      'Under 256 KB',
-      'PNG, JPG, GIF or WEBP',
-      'Animated emoji need Nitro to use outside your server',
-    ],
+    notes: ['128 × 128 px', 'Under 256 KB', 'PNG, JPG, GIF or WEBP', 'Sending animated emoji needs Nitro'],
   },
   custom: {
     id: 'custom',

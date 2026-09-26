@@ -14,13 +14,13 @@ Uploads never leave the browser. Only generation descriptions go to the server.
 
 ## Platform requirements
 
-|           | Slack                                | Discord                                                   |
-| --------- | ------------------------------------ | --------------------------------------------------------- |
-| Size      | 128 × 128 px (square)                | 128 × 128 px (shown at up to 48 px)                       |
-| Max file  | 128 KB                               | 256 KB                                                    |
-| Formats   | PNG, JPG, GIF                        | PNG, JPG, GIF, WEBP                                       |
-| Animation | GIF, up to 50 frames                 | GIF; using animated emoji outside your server needs Nitro |
-| Names     | lowercase letters, numbers, `-`, `_` | 2 to 32 letters, numbers, `_`                             |
+|           | Slack                                | Discord                                 |
+| --------- | ------------------------------------ | --------------------------------------- |
+| Size      | 128 × 128 px (square)                | 128 × 128 px (shown at up to 48 px)     |
+| Max file  | 128 KB                               | 256 KB                                  |
+| Formats   | PNG, JPG, GIF                        | PNG, JPG, GIF, WEBP                     |
+| Animation | GIF, up to 50 frames                 | GIF; sending animated emoji needs Nitro |
+| Names     | lowercase letters, numbers, `-`, `_` | 2 to 32 letters, numbers, `_`           |
 
 Sources: [Slack help](https://slack.com/help/articles/206870177-Add-custom-emoji-and-aliases-to-your-workspace), [Discord support](https://support.discord.com/hc/en-us/articles/360036479811-Custom-Emojis). Presets live in `src/lib/platforms.ts`.
 
@@ -70,9 +70,11 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 The layout reserves a 300×250 slot under the settings panel on desktop and a 320×100 banner at the bottom on phones, outside the editing flow so ads never push controls around. Set `VITE_AD_SLOTS=show` to see placeholders; drop the ad network's tag into `src/components/AdSlot.tsx`.
 
-## Support pages and analytics
+## Guides, support pages and analytics
 
-`/faq`, `/privacy` and `/terms` live in `src/pages/InfoPage.tsx`; the footer links to them and to a feedback email. The contact address is `CONTACT_EMAIL` in `src/lib/site.ts`. Set `VITE_CF_ANALYTICS_TOKEN` in Netlify's environment variables to turn on Cloudflare Web Analytics (cookieless); without it nothing loads.
+`/guides`, `/faq`, `/privacy` and `/terms` are defined in `src/pages/pages.tsx` and `src/pages/guides.tsx`. The build prerenders each one to static HTML with its own title and description (`scripts/prerender.mjs`) and writes `sitemap.xml`, so search engines and ad reviewers see the content without running JavaScript. Add a guide to `GUIDES` and it gets a page, a sitemap entry and a spot on the guides index.
+
+The contact address is `CONTACT_EMAIL` in `src/lib/site.ts`. Set `VITE_CF_ANALYTICS_TOKEN` in Netlify's environment variables to turn on Cloudflare Web Analytics (cookieless); without it nothing loads.
 
 ## Code map
 

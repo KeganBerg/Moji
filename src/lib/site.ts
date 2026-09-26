@@ -2,19 +2,7 @@ export const CONTACT_EMAIL = 'hello@moji.locker'
 
 export const FEEDBACK_URL = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Moji Locker feedback')}`
 
-export type Route = 'app' | 'faq' | 'privacy' | 'terms'
-
-export const PAGE_TITLES: Record<Route, string> = {
-  app: 'Moji Locker · custom emoji maker',
-  faq: 'FAQ · Moji Locker',
-  privacy: 'Privacy · Moji Locker',
-  terms: 'Terms · Moji Locker',
-}
-
-export function routeFor(pathname: string): Route {
-  const slug = pathname.replace(/\/+$/, '').slice(1)
-  return slug === 'faq' || slug === 'privacy' || slug === 'terms' ? slug : 'app'
-}
+export const SITE_URL = 'https://moji.locker'
 
 // Cloudflare Web Analytics: cookieless, no personal data. Only loads when a
 // token is configured, so local and preview builds send nothing.

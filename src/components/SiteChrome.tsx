@@ -24,6 +24,7 @@ export function SiteFooter() {
         Images you upload never leave your browser. Descriptions are sent to the image model only when you generate.
       </p>
       <nav className="footer-links" aria-label="Site">
+        <a href="/guides">Guides</a>
         <a href="/faq">FAQ</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
