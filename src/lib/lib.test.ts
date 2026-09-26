@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMATIONS, getAnimation } from './animations'
+import { ANIMATIONS, composeAnimations, getAnimation } from './animations'
 import { encodeGif, frameTiming, gifLadder } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds } from './render'
@@ -65,5 +65,28 @@ describe('opaqueBounds', () => {
     data[(2 * w + 1) * 4 + 3] = 255
     expect(opaqueBounds(data, w, h)).toEqual({ x: 1, y: 1, w: 2, h: 2 })
     expect(opaqueBounds(new Uint8ClampedArray(w * h * 4), w, h)).toBeNull()
+  })
+})
+
+describe('composeAnimations', () => {
+  it('returns static for nothing picked and the animation itself for one', () => {
+    expect(composeAnimations([]).frames).toBe(1)
+    expect(composeAnimations([getAnimation('spin')])).toBe(getAnimation('spin'))
+  })
+  it('combines party + bounce into one seamless loop', () => {
+    const combo = composeAnimations([getAnimation('party'), getAnimation('bounce')])
+    expect(combo.label).toBe('Party + Bounce')
+    expect(combo.duration).toBe(1000)
+    const start = combo.at(0)
+    const mid = combo.at(0.5)
+    expect(mid.hue).toBeCloseTo(180)
+    expect(mid.y).not.toBeCloseTo(start.y!)
+    expect(combo.inset).toBe(getAnimation('bounce').inset)
+  })
+  it('repeats faster motions a whole number of times', () => {
+    const combo = composeAnimations([getAnimation('spin'), getAnimation('shake')])
+    expect(combo.duration).toBe(1200)
+    expect(combo.frames).toBe(24)
+    expect(combo.at(0).x).toBeCloseTo(0)
   })
 })

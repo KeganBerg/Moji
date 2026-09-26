@@ -292,15 +292,20 @@ h2 {
 
 .chat-avatar {
   flex: none;
+  display: grid;
+  place-items: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.2);
 }
 
 .chat-dark .chat-avatar {
   border-radius: 50%;
-  background: linear-gradient(135deg, #22d3ee, #6366f1);
 }
 
 .chat-body {
@@ -975,4 +980,17 @@ input[role='switch']:checked::after {
     padding-right: 22px;
     background-position: right 7px center;
   }
+}
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.group-head .hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
