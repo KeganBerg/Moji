@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ANIMATIONS, composeAnimations, getAnimation } from './animations'
 import { encodeGif, frameTiming, gifLadder } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
-import { opaqueBounds } from './render'
+import { opaqueBounds, rotatedSize } from './render'
+import { DEFAULT_TUNE, tunePixels } from './tune'
 
 describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
@@ -88,5 +89,60 @@ describe('composeAnimations', () => {
     expect(combo.duration).toBe(1200)
     expect(combo.frames).toBe(24)
     expect(combo.at(0).x).toBeCloseTo(0)
+  })
+})
+
+describe('party color', () => {
+  it('only sets hue when a color motion is picked', () => {
+    expect(composeAnimations([getAnimation('spin'), getAnimation('bounce')]).at(0.3).hue).toBeUndefined()
+    expect(composeAnimations([getAnimation('party'), getAnimation('spin')]).at(0).hue).toBe(0)
+  })
+})
+
+describe('rotatedSize', () => {
+  it('swaps sides at 90° and grows at 45°', () => {
+    const r90 = rotatedSize(200, 100, 90)
+    expect(r90.w).toBeCloseTo(100)
+    expect(r90.h).toBeCloseTo(200)
+    expect(rotatedSize(100, 100, 45).w).toBeCloseTo(141.42, 1)
+    expect(rotatedSize(100, 100, -180).w).toBeCloseTo(100)
+  })
+})
+
+describe('tunePixels', () => {
+  const px = (...rgba: number[]) => new Uint8ClampedArray(rgba)
+
+  it('leaves pixels alone at neutral', () => {
+    const d = px(10, 120, 250, 255)
+    tunePixels(d, 1, 1, DEFAULT_TUNE)
+    expect([...d]).toEqual([10, 120, 250, 255])
+  })
+  it('turns grey at -100 saturation and keeps alpha', () => {
+    const d = px(200, 40, 40, 180)
+    tunePixels(d, 1, 1, { ...DEFAULT_TUNE, saturation: -100 })
+    expect(d[0]).toBe(d[1])
+    expect(d[1]).toBe(d[2])
+    expect(d[3]).toBe(180)
+  })
+  it('brightens and adds contrast', () => {
+    const bright = px(100, 100, 100, 255)
+    tunePixels(bright, 1, 1, { ...DEFAULT_TUNE, brightness: 50 })
+    expect(bright[0]).toBeGreaterThan(100)
+    const contrast = px(100, 160, 128, 255)
+    tunePixels(contrast, 1, 1, { ...DEFAULT_TUNE, contrast: 50 })
+    expect(contrast[0]).toBeLessThan(100)
+    expect(contrast[1]).toBeGreaterThan(160)
+    expect(contrast[2]).toBe(128)
+  })
+  it('sharpens edges without darkening against transparency', () => {
+    // A 3×1 strip: transparent, white, white. Sharpening must not pull the
+    // white pixel toward the transparent pixel's black RGB.
+    const d = px(0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255)
+    tunePixels(d, 3, 1, { ...DEFAULT_TUNE, sharpness: 100 })
+    expect(d[4]).toBe(255)
+    // Real edges get stronger.
+    const e = px(50, 50, 50, 255, 50, 50, 50, 255, 200, 200, 200, 255)
+    tunePixels(e, 3, 1, { ...DEFAULT_TUNE, sharpness: 100 })
+    expect(e[4]).toBeLessThan(50)
   })
 })
