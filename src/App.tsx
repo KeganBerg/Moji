@@ -4,7 +4,7 @@ import { AdSlot } from './components/AdSlot'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
 import { Segmented } from './components/Segmented'
-import { ANIMATIONS, getAnimation } from './lib/animations'
+import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
@@ -41,7 +41,8 @@ export default function App() {
   const [platformId, setPlatformId] = useState<PlatformId>('slack')
   const [customSize, setCustomSize] = useState(128)
   const [customKb, setCustomKb] = useState(256)
-  const [animationId, setAnimationId] = useState('none')
+  // Picked motions stack (e.g. Party + Bounce); an empty list means static.
+  const [motionIds, setMotionIds] = useState<string[]>([])
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
@@ -56,7 +57,9 @@ export default function App() {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
-  const animation = getAnimation(animationId)
+  const animation = useMemo(() => composeAnimations(motionIds.map(getAnimation)), [motionIds])
+  const toggleMotion = (id: string) =>
+    setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(() => ({ fit, padding, background }), [fit, padding, background])
   const source = useMemo(() => (active ? prepareSource(active.image, trim) : null), [active, trim])
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
@@ -218,7 +221,9 @@ export default function App() {
             )}
           </div>
 
-          {source && <ChatPreview source={source} animation={animation} options={options} name={emojiName} />}
+          {source && active && (
+            <ChatPreview source={source} animation={animation} options={options} name={emojiName} seed={active.id} />
+          )}
 
           <div className="composer-wrap">
             {history.length > 0 && (
@@ -347,27 +352,32 @@ export default function App() {
             </div>
 
             <div className="group">
-              <h2>Motion</h2>
-              <div className="motions" role="radiogroup" aria-label="Motion">
-                {ANIMATIONS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={animationId === a.id}
-                    className={`motion${animationId === a.id ? ' is-active' : ''}`}
-                    onClick={() => setAnimationId(a.id)}
-                  >
-                    <span className="motion-thumb">
-                      {source ? (
-                        <EmojiCanvas source={source} animation={a} options={options} size={36} />
-                      ) : (
-                        <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
-                      )}
-                    </span>
-                    <span>{a.label}</span>
-                  </button>
-                ))}
+              <div className="group-head">
+                <h2>Motion</h2>
+                <span className="hint">{motionIds.length > 1 ? animation.label : 'Pick one or combine a few'}</span>
+              </div>
+              <div className="motions" role="group" aria-label="Motion">
+                {ANIMATIONS.map((a) => {
+                  const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      aria-pressed={on}
+                      className={`motion${on ? ' is-active' : ''}`}
+                      onClick={() => toggleMotion(a.id)}
+                    >
+                      <span className="motion-thumb">
+                        {source ? (
+                          <EmojiCanvas source={source} animation={a} options={options} size={36} />
+                        ) : (
+                          <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
+                        )}
+                      </span>
+                      <span>{a.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

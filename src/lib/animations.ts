@@ -99,3 +99,37 @@ export const ANIMATIONS: Animation[] = [
 export function getAnimation(id: string): Animation {
   return ANIMATIONS.find((a) => a.id === id) ?? ANIMATIONS[0]
 }
+
+/**
+ * Stacks several animations into one loop (e.g. Party + Bounce). The loop
+ * runs as long as the slowest pick; faster ones repeat a whole number of
+ * times inside it so the GIF still loops seamlessly. Transforms combine:
+ * offsets, rotation and hue add up, scales multiply.
+ */
+export function composeAnimations(list: Animation[]): Animation {
+  const moving = list.filter((a) => a.frames > 1)
+  if (moving.length === 0) return ANIMATIONS[0]
+  if (moving.length === 1) return moving[0]
+  const duration = Math.max(...moving.map((a) => a.duration))
+  const parts = moving.map((a) => ({ a, cycles: Math.max(1, Math.round(duration / a.duration)) }))
+  return {
+    id: moving.map((a) => a.id).join('+'),
+    label: moving.map((a) => a.label).join(' + '),
+    duration,
+    frames: Math.max(...parts.map(({ a, cycles }) => a.frames * cycles)),
+    inset: Math.min(...moving.map((a) => a.inset)),
+    at: (t) => {
+      const out = { rotate: 0, scaleX: 1, scaleY: 1, x: 0, y: 0, hue: 0 }
+      for (const { a, cycles } of parts) {
+        const f = a.at((t * cycles) % 1)
+        out.rotate += f.rotate ?? 0
+        out.scaleX *= f.scaleX ?? 1
+        out.scaleY *= f.scaleY ?? 1
+        out.x += f.x ?? 0
+        out.y += f.y ?? 0
+        out.hue += f.hue ?? 0
+      }
+      return out
+    },
+  }
+}
