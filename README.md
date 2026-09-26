@@ -66,9 +66,9 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 `supabase/migrations/` creates the private cache bucket and the `generation_log` table; `supabase functions deploy generate-emoji --no-verify-jwt` deploys the function.
 
-## Ad space
+## Ads
 
-The layout reserves a 300×250 slot under the settings panel on desktop and a 320×100 banner at the bottom on phones, outside the editing flow so ads never push controls around. Set `VITE_AD_SLOTS=show` to see placeholders; drop the ad network's tag into `src/components/AdSlot.tsx`.
+AdSense (publisher `ca-pub-8080930241819022`) places ads with Auto ads: the loader script is in `index.html` and `public/ads.txt` authorizes the account. Placement is managed in AdSense, not in the code. If Auto ads ever cover the editor, exclude that area in AdSense's Auto ads settings.
 
 ## Guides, support pages and analytics
 
