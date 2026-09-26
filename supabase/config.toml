@@ -1,0 +1,6 @@
+# Local Supabase CLI settings. Production auth URLs are set in the dashboard.
+project_id = "moji"
+
+[auth]
+site_url = "https://moji.locker"
+additional_redirect_urls = ["http://localhost:5173"]

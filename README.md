@@ -36,7 +36,7 @@ npm run build
 
 ## Deploy
 
-**Netlify** hosts the web app. `netlify.toml` sets the build (`npm run build` → `dist`) and the SPA fallback. Connect the repo in Netlify and add the env vars below under Site configuration → Environment variables.
+**Netlify** hosts the web app. `netlify.toml` sets the build (`npm run build` → `dist`) and the SPA fallback. Connect the repo in Netlify, add the env vars below under Site configuration → Environment variables, and add `moji.locker` as the production domain under Domain management.
 
 **Supabase** is the backend and is optional for v1:
 
@@ -48,6 +48,7 @@ npm run build
 
 Copy `.env.example` to `.env.local` for local development. Never commit keys.
 
+- In Supabase, set Authentication → URL Configuration → Site URL to `https://moji.locker` before adding sign-in.
 - `supabase/migrations/…_emoji_bucket.sql` creates the public `emojis` storage bucket used by **Get a share link** (`supabase db push`).
 - `supabase/functions/generate-emoji` is the Edge Function for prompt-to-emoji (`supabase functions deploy generate-emoji`).
 
