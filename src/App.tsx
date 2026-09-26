@@ -168,14 +168,14 @@ export default function App() {
   return (
     <div className="shell">
       <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Moji home">
+        <a className="wordmark" href="/" aria-label="Moji Locker home">
           <svg viewBox="0 0 32 32" aria-hidden>
             <rect width="32" height="32" rx="9" />
             <circle cx="11.5" cy="13" r="2.2" />
             <circle cx="20.5" cy="13" r="2.2" />
             <path d="M10 19.5c1.6 2.6 3.8 3.9 6 3.9s4.4-1.3 6-3.9" />
           </svg>
-          moji
+          Moji Locker
         </a>
         <p className="topbar-tag">Custom emoji, sized right for Slack and Discord.</p>
       </header>

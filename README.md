@@ -1,4 +1,4 @@
-# Moji
+# Moji Locker
 
 A quick, clean one-stop shop for custom emoji. Upload an image (or describe one), pick where it's going, add a preset animation, and download a file that already meets the app's upload rules.
 

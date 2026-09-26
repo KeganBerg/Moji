@@ -184,13 +184,17 @@ Deno.serve(async (req) => {
     await release()
     console.error('image model error', res.status, detail)
     const blocked = res.status === 400 && /safety|moderation|content_policy/i.test(detail)
+    // Out of OpenAI credit or bad key: retrying won't help, so say so.
+    const unavailable = res.status === 401 || /insufficient_quota|billing|credit/i.test(detail)
     return json(
       {
         error: blocked
           ? "That description can't be generated. Try wording it differently."
-          : 'Generation failed. Try again.',
+          : unavailable
+            ? 'AI generation is unavailable right now. Uploads still work.'
+            : 'Generation failed. Try again.',
       },
-      blocked ? 400 : 502,
+      blocked ? 400 : unavailable ? 503 : 502,
       headers,
     )
   }
