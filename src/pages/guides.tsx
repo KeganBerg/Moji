@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { AdSlot } from '../components/AdSlot'
 import { Cta } from '../components/InfoLinks'
 import type { Page } from './pages'
 
@@ -54,7 +53,6 @@ export const GUIDES: Guide[] = [
           disappears. Bold shapes, thick outlines and a subject that fills the square read far better than a photo with
           lots of background.
         </p>
-        <AdSlot placement="article" />
         <h2>Why uploads get rejected</h2>
         <p>
           Almost every failed upload is a file over 128 KB. Still images rarely hit that at 128 px, but animated GIFs
@@ -121,7 +119,6 @@ export const GUIDES: Guide[] = [
           Discord displays emoji at 22 px inline and 48 px when a message is only emoji, so a 128 px square gives it a
           sharp source for both. Transparent backgrounds look right in both light and dark mode.
         </p>
-        <AdSlot placement="article" />
         <h2>Upload from Server Settings</h2>
         <ol>
           <li>Open the menu next to your server's name and choose Server Settings.</li>
@@ -172,7 +169,6 @@ export const GUIDES: Guide[] = [
           much changes between frames. A 128 px emoji with 30 frames of full-color gradient can easily pass 300 KB,
           while the same motion in flat colors might be 40 KB.
         </p>
-        <AdSlot placement="article" />
         <h2>Trim in this order</h2>
         <ol>
           <li>

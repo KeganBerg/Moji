@@ -68,12 +68,7 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 ## Ads
 
-AdSense is set up for publisher `ca-pub-8080930241819022`: the loader script is in `index.html` and `public/ads.txt` authorizes the account. Ads go in 300×250 slots (`src/components/AdSlot.tsx`):
-
-- **Editor**: under the settings panel on desktop, and after the Download button on phones, so it only appears once you've finished editing.
-- **Guides**: one slot inside each guide.
-
-Slots stay empty until an ad unit exists. Create a 300×250 display unit in AdSense and set its id as `VITE_ADSENSE_SLOT` in Netlify's environment variables, then redeploy. On desktop the editor slot always keeps its space so an ad loading never moves the controls; on phones and in guides an unused slot takes no space. `VITE_AD_SLOTS=show` draws placeholders for layout work. Keep AdSense Auto ads off, or at least turn off its anchor and vignette formats, so Google doesn't place extra ads over the editor.
+AdSense (publisher `ca-pub-8080930241819022`) places ads with Auto ads: the loader script is in `index.html` and `public/ads.txt` authorizes the account. Placement is managed in AdSense, not in the code. If Auto ads ever cover the editor, exclude that area in AdSense's Auto ads settings.
 
 ## Guides, support pages and analytics
 

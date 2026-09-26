@@ -1,6 +1,5 @@
 import { ArrowUp, Download, ImagePlus, LoaderCircle, Sparkles, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AdSlot } from './components/AdSlot'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
 import { Segmented } from './components/Segmented'
@@ -469,8 +468,6 @@ export default function App() {
               </button>
             </div>
           </section>
-
-          <AdSlot placement="editor" />
         </div>
       </main>
 

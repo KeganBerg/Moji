@@ -849,35 +849,6 @@ input[role='switch']:checked::after {
   opacity: 0.3;
 }
 
-/* Reserved ad space: always takes room, so enabling ads never moves controls. */
-
-.ad-slot {
-  display: grid;
-  place-items: center;
-  width: 300px;
-  max-width: 100%;
-  height: 250px;
-  margin: 0 auto;
-  border-radius: var(--radius);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.ad-slot.is-placeholder {
-  border: 1px dashed var(--border-strong);
-}
-
-.ad-article {
-  margin: 28px auto;
-}
-
-.ad-article:not(.is-active) {
-  height: 0;
-  margin: 0;
-}
-
 /* Feedback */
 
 .toast {
@@ -1136,12 +1107,6 @@ input[role='switch']:checked::after {
 
   .sidebar {
     position: static;
-  }
-
-  /* On phones the editor ad sits after Download, at the end of the flow.
-     Until ads are live it takes no space. */
-  .ad-slot:not(.is-active) {
-    height: 0;
   }
 }
 
