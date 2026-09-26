@@ -14,6 +14,7 @@
 //   DAILY_LIMIT_PER_VISITOR   default 15
 //   DAILY_LIMIT_GLOBAL        default 300
 //   ALLOWED_ORIGINS           comma list, default moji.locker + localhost
+//                             (mojilocker.netlify.app and its previews are always allowed)
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -59,8 +60,11 @@ async function sha256(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// The Netlify site itself and its deploy previews (deploy-preview-N--mojilocker).
+const NETLIFY_ORIGIN = /^https:\/\/([a-z0-9-]+--)?mojilocker\.netlify\.app$/
+
 function cors(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin)
+  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || NETLIFY_ORIGIN.test(origin))
   return {
     'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

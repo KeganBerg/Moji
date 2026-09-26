@@ -49,7 +49,7 @@ Cost controls in the function:
 - **Cache**: the same description and style return the stored image for free.
 - **Per-visitor limit**: 15 new images per visitor per day (visitors are a hashed IP plus date; raw IPs are never stored).
 - **Global cap**: 300 paid images per day across everyone, so the worst case is about $1.50/day.
-- **Origin check**: only moji.locker and localhost can call it.
+- **Origin check**: only moji.locker, the mojilocker Netlify site and its deploy previews, and localhost can call it.
 
 The prompt template pins the model to one centered subject, no scenery and no invented text, which is what keeps it from adding things you didn't ask for.
 
