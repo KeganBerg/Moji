@@ -538,12 +538,12 @@ export default function App() {
                   </button>
                 )}
               </div>
-              {TUNE_CONTROLS.map(({ key, label }) => (
+              {TUNE_CONTROLS.map(({ key, label, min }) => (
                 <label className="setting" key={key}>
                   <span>{label}</span>
                   <input
                     type="range"
-                    min={-100}
+                    min={min}
                     max={100}
                     step={1}
                     value={tune[key]}
