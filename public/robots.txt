@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://moji.locker/sitemap.xml

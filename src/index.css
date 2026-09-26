@@ -995,6 +995,88 @@ input[role='switch']:checked::after {
   color: var(--text);
 }
 
+.info ol {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.info code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.9em;
+}
+
+.info-table {
+  width: 100%;
+  margin: 4px 0 16px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.info-table th,
+.info-table td {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.info-table th {
+  width: 34%;
+  padding-right: 16px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.info-table td {
+  color: var(--text);
+}
+
+.info .info-cta {
+  margin-top: 32px;
+}
+
+.info .info-cta a {
+  display: inline-flex;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 14px;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.guide-list {
+  display: grid;
+  margin: 24px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.guide-list a {
+  display: grid;
+  gap: 4px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.guide-list a:hover strong {
+  color: var(--accent);
+}
+
+.guide-list strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
 .faq {
   margin-top: 24px;
   border-top: 1px solid var(--border);
