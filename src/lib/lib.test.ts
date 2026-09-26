@@ -4,6 +4,7 @@ import { encodeGif, frameTiming, gifLadder } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
+import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 
 describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
@@ -144,5 +145,43 @@ describe('tunePixels', () => {
     const e = px(50, 50, 50, 255, 50, 50, 50, 255, 200, 200, 200, 255)
     tunePixels(e, 3, 1, { ...DEFAULT_TUNE, sharpness: 100 })
     expect(e[4]).toBeLessThan(50)
+  })
+})
+
+describe('background cutout', () => {
+  // A 40×40 "moon": a light grey disc with a dark crater, on slightly noisy black.
+  function moon() {
+    const w = 40,
+      h = 40
+    const d = new Uint8ClampedArray(w * h * 4)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        const inDisc = (x - 20) ** 2 + (y - 20) ** 2 < 14 ** 2
+        const crater = (x - 22) ** 2 + (y - 18) ** 2 < 3 ** 2
+        const v = crater ? 8 : inDisc ? 190 : (x * 7 + y * 13) % 9
+        d.set([v, v, v, 255], i)
+      }
+    }
+    return { d, w, h, at: (x: number, y: number) => d[(y * w + x) * 4 + 3] }
+  }
+
+  it('suggests a cutout for a subject on a plain background only', () => {
+    const m = moon()
+    expect(suggestCutout(m.d, m.w, m.h)).toBe(true)
+    const clear = new Uint8ClampedArray(16 * 16 * 4)
+    expect(suggestCutout(clear, 16, 16)).toBe(false)
+    const busy = new Uint8ClampedArray(16 * 16 * 4).map((_, i) => (i % 4 === 3 ? 255 : (i * 97) % 256))
+    expect(suggestCutout(busy, 16, 16)).toBe(false)
+  })
+
+  it('removes the background but keeps dark details inside the subject', () => {
+    const m = moon()
+    removeBackground(m.d, m.w, m.h, DEFAULT_STRENGTH)
+    expect(m.at(0, 0)).toBe(0)
+    expect(m.at(39, 20)).toBe(0)
+    expect(m.at(20, 20)).toBe(255)
+    // The crater is as dark as the sky but isn't connected to it.
+    expect(m.at(22, 18)).toBe(255)
   })
 })

@@ -1,4 +1,5 @@
 import type { FrameTransform } from './animations'
+import { removeBackground, suggestCutout } from './cutout'
 
 export type Fit = 'contain' | 'cover'
 
@@ -81,7 +82,12 @@ export function opaqueBounds(
  * keeps small emoji sharp) and optionally trimmed to its visible pixels so the
  * emoji fills the frame.
  */
-export function prepareSource(img: CanvasImageSource & { width: number; height: number }, trim: boolean): Canvas2D {
+export function prepareSource(
+  img: CanvasImageSource & { width: number; height: number },
+  trim: boolean,
+  /** Background removal strength, or null to keep the full image. */
+  cutout: number | null = null,
+): Canvas2D {
   let w = img.width
   let h = img.height
   let current: CanvasImageSource = img
@@ -99,6 +105,11 @@ export function prepareSource(img: CanvasImageSource & { width: number; height: 
   const octx = ctx2d(out)
   octx.imageSmoothingQuality = 'high'
   octx.drawImage(current, 0, 0, out.width, out.height)
+  if (cutout !== null) {
+    const data = octx.getImageData(0, 0, out.width, out.height)
+    removeBackground(data.data, out.width, out.height, cutout)
+    octx.putImageData(data, 0, 0)
+  }
   snapAlpha(octx, out.width, out.height)
   if (!trim) return out
 
@@ -202,6 +213,15 @@ function tinted(source: Canvas2D, hue: number): Canvas2D {
 }
 
 const TINT_STRENGTH = 0.5
+
+/** Whether an image looks like a subject on a plain background, checked on a small copy. */
+export function looksCuttable(img: CanvasImageSource & { width: number; height: number }): boolean {
+  const scale = Math.min(1, 96 / Math.max(img.width, img.height))
+  const c = makeCanvas(img.width * scale, img.height * scale)
+  const ctx = ctx2d(c)
+  ctx.drawImage(img, 0, 0, c.width, c.height)
+  return suggestCutout(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height)
+}
 
 export { makeCanvas, ctx2d }
 
