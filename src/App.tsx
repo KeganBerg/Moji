@@ -1,26 +1,42 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Dropzone } from './components/Dropzone'
+import { ArrowUp, Download, ImagePlus, LoaderCircle, Sparkles, Upload } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AdSlot } from './components/AdSlot'
+import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
+import { Segmented } from './components/Segmented'
 import { ANIMATIONS, getAnimation } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
-import { getGenerator } from './lib/generate'
+import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_RENDER, loadImage, prepareSource, type Fit, type RenderOptions } from './lib/render'
-import { saveEmoji, supabase } from './lib/supabase'
 
-type SourceMode = 'upload' | 'prompt'
+interface HistoryItem {
+  id: number
+  image: HTMLImageElement
+  thumb: string
+  name: string
+}
 
-const STYLES = ['flat', '3d', 'pixel', 'sticker', 'hand-drawn']
+const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml'
+const HISTORY_LIMIT = 8
+const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
+  value: id,
+  label: PLATFORMS[id].label,
+}))
 
 export default function App() {
   const generator = useMemo(() => getGenerator(), [])
+  const fileInput = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const nextId = useRef(1)
 
-  const [mode, setMode] = useState<SourceMode>('upload')
-  const [image, setImage] = useState<HTMLImageElement | null>(null)
-  const [trim, setTrim] = useState(true)
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [activeId, setActiveId] = useState<number | null>(null)
   const [prompt, setPrompt] = useState('')
-  const [style, setStyle] = useState(STYLES[0])
+  const [style, setStyle] = useState<StyleId>('flat')
   const [generating, setGenerating] = useState(false)
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const [dragging, setDragging] = useState(false)
 
   const [platformId, setPlatformId] = useState<PlatformId>('slack')
   const [customSize, setCustomSize] = useState(128)
@@ -29,52 +45,88 @@ export default function App() {
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
+  const [trim, setTrim] = useState(true)
   const [name, setName] = useState('')
 
   const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [shared, setShared] = useState<{ key: object; url: string } | null>(null)
-  const [sharing, setSharing] = useState(false)
 
+  const active = history.find((h) => h.id === activeId) ?? null
   const platform = useMemo(() => {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
   const animation = getAnimation(animationId)
   const options: RenderOptions = useMemo(() => ({ fit, padding, background }), [fit, padding, background])
-  const source = useMemo(() => (image ? prepareSource(image, trim) : null), [image, trim])
-  // New identity whenever anything that affects the exported file changes.
+  const source = useMemo(() => (active ? prepareSource(active.image, trim) : null), [active, trim])
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
-  const result = exported?.result ?? null
-  const exporting = !!source && exported?.key !== exportKey
-  const shareUrl = shared?.key === exportKey ? shared.url : null
-  const fileName = `${sanitizeName(name || 'moji', platformId)}.${result?.extension ?? (animation.frames > 1 ? 'gif' : 'png')}`
+  const result = exported?.key === exportKey ? exported.result : null
+  const exporting = !!source && !result
+  const emojiName = sanitizeName(name || active?.name || 'moji', platformId)
+  const extension = animation.frames > 1 ? 'gif' : 'png'
+  const fileName = `${emojiName}.${extension}`
 
-  const onFile = useCallback(async (file: File, suggestedName?: string) => {
-    setError(null)
-    try {
-      setImage(await loadImage(file))
-      setName((prev) => prev || suggestedName || file.name.replace(/\.[^.]+$/, ''))
-    } catch (e) {
-      setError((e as Error).message)
+  const addImage = useCallback(async (blob: Blob, suggestedName: string) => {
+    const image = await loadImage(blob)
+    const item: HistoryItem = {
+      id: nextId.current++,
+      image,
+      thumb: URL.createObjectURL(blob),
+      name: sanitizeName(suggestedName, 'discord'),
     }
+    setHistory((h) => {
+      const next = [item, ...h]
+      next.slice(HISTORY_LIMIT).forEach((old) => URL.revokeObjectURL(old.thumb))
+      return next.slice(0, HISTORY_LIMIT)
+    })
+    setActiveId(item.id)
+    setName('')
   }, [])
 
+  const onFile = useCallback(
+    async (file: File) => {
+      setError(null)
+      try {
+        await addImage(file, file.name.replace(/\.[^.]+$/, ''))
+      } catch (e) {
+        setError((e as Error).message)
+      }
+    },
+    [addImage],
+  )
+
   const generate = async () => {
-    if (!prompt.trim()) return
+    const text = prompt.trim()
+    if (!text || generating) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setGenerating(true)
     setError(null)
     try {
-      const blob = await generator.generate({ prompt, style })
-      await onFile(new File([blob], 'generated.png', { type: blob.type }), prompt.split(/\s+/).slice(0, 3).join('_'))
+      const out = await generator.generate({ prompt: text, style }, controller.signal)
+      if (out.remaining !== null) setRemaining(out.remaining)
+      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'))
     } catch (e) {
-      setError((e as Error).message)
+      if ((e as Error).name !== 'AbortError') setError((e as Error).message)
     } finally {
-      setGenerating(false)
+      if (abortRef.current === controller) setGenerating(false)
     }
   }
 
-  // Re-export whenever anything changes so the size check is always current.
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  // Pasting an image anywhere loads it.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'))
+      if (file) onFile(file)
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [onFile])
+
+  // Re-export on every change so the size check is always current.
   useEffect(() => {
     if (!source) return
     let cancelled = false
@@ -88,7 +140,7 @@ export default function App() {
       } catch (e) {
         if (!cancelled) setError((e as Error).message)
       }
-    }, 250)
+    }, 200)
     return () => {
       cancelled = true
       clearTimeout(timer)
@@ -105,301 +157,336 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const share = async () => {
-    if (!result) return
-    setSharing(true)
-    setError(null)
-    try {
-      setShared({ key: exportKey, url: await saveEmoji(result.blob, fileName) })
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSharing(false)
-    }
-  }
+  const specLine = [
+    `${platform.size}×${platform.size}`,
+    `under ${formatBytes(platform.maxBytes)}`,
+    platform.maxFrames < 200 ? `GIF up to ${platform.maxFrames} frames` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <div className="app">
-      <header className="top">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            ☺
-          </span>
-          <span>Moji</span>
-        </div>
-        <p className="tagline">Perfectly sized custom emoji for Slack, Discord, and anywhere else.</p>
+    <div className="shell">
+      <header className="topbar">
+        <a className="wordmark" href="/" aria-label="Moji home">
+          <svg viewBox="0 0 32 32" aria-hidden>
+            <rect width="32" height="32" rx="9" />
+            <circle cx="11.5" cy="13" r="2.2" />
+            <circle cx="20.5" cy="13" r="2.2" />
+            <path d="M10 19.5c1.6 2.6 3.8 3.9 6 3.9s4.4-1.3 6-3.9" />
+          </svg>
+          moji
+        </a>
+        <p className="topbar-tag">Custom emoji, sized right for Slack and Discord.</p>
       </header>
 
-      <main className="layout">
-        <section className="panel controls">
-          <div className="step">
-            <h2>
-              <span className="num">1</span> Start with an image
-            </h2>
-            <div className="tabs" role="tablist">
-              {(['upload', 'prompt'] as const).map((m) => (
-                <button
-                  key={m}
-                  role="tab"
-                  aria-selected={mode === m}
-                  className={mode === m ? 'active' : ''}
-                  onClick={() => setMode(m)}
-                >
-                  {m === 'upload' ? 'Upload' : 'Describe it'}
-                </button>
-              ))}
-            </div>
-            {mode === 'upload' ? (
-              <>
-                <Dropzone onFile={onFile} />
-                <label className="check">
-                  <input type="checkbox" checked={trim} onChange={(e) => setTrim(e.target.checked)} />
-                  Trim empty edges so the emoji fills the square
-                </label>
-              </>
+      <main className="workspace">
+        <section
+          className={`stage${dragging ? ' is-dragging' : ''}`}
+          aria-label="Emoji preview"
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false)
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'))
+            if (file) onFile(file)
+          }}
+        >
+          <div className={`canvas checker${generating ? ' is-busy' : ''}`}>
+            {source ? (
+              <EmojiCanvas source={source} animation={animation} options={options} size={208} />
             ) : (
-              <div className="prompt">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="a tiny taco wearing sunglasses"
-                  rows={3}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generate()
-                  }}
-                />
-                <div className="chips">
-                  {STYLES.map((s) => (
-                    <button key={s} className={`chip${style === s ? ' active' : ''}`} onClick={() => setStyle(s)}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-                <button className="primary" onClick={generate} disabled={generating || !prompt.trim()}>
-                  {generating ? 'Generating…' : 'Generate'}
-                </button>
-                {!generator.isReal && (
-                  <p className="note">
-                    AI generation isn't connected yet, so this makes a placeholder badge from your prompt. Everything
-                    after this step works for real.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="step">
-            <h2>
-              <span className="num">2</span> Where is it going?
-            </h2>
-            <div className="segmented">
-              {(Object.keys(PLATFORMS) as PlatformId[]).map((id) => (
-                <button key={id} className={platformId === id ? 'active' : ''} onClick={() => setPlatformId(id)}>
-                  {PLATFORMS[id].label}
-                </button>
-              ))}
-            </div>
-            {platformId === 'custom' ? (
-              <div className="row">
-                <label>
-                  Size (px)
-                  <input
-                    type="number"
-                    min={16}
-                    max={512}
-                    value={customSize}
-                    onChange={(e) => setCustomSize(Math.min(512, Math.max(16, Number(e.target.value) || 128)))}
-                  />
-                </label>
-                <label>
-                  Max file size (KB)
-                  <input
-                    type="number"
-                    min={8}
-                    max={5120}
-                    value={customKb}
-                    onChange={(e) => setCustomKb(Math.min(5120, Math.max(8, Number(e.target.value) || 256)))}
-                  />
-                </label>
-              </div>
-            ) : (
-              <ul className="specs">
-                {platform.notes.map((n) => (
-                  <li key={n}>{n}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="step">
-            <h2>
-              <span className="num">3</span> Add some motion
-            </h2>
-            <div className="animations">
-              {ANIMATIONS.map((a) => (
-                <button
-                  key={a.id}
-                  className={`anim${animationId === a.id ? ' active' : ''}`}
-                  onClick={() => setAnimationId(a.id)}
-                  aria-pressed={animationId === a.id}
-                >
-                  {source ? (
-                    <EmojiCanvas source={source} animation={a} options={options} size={44} />
-                  ) : (
-                    <span className="anim-empty" />
-                  )}
-                  <span>{a.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <details className="step">
-            <summary>
-              <h2>
-                <span className="num">4</span> Fine-tune
-              </h2>
-            </summary>
-            <div className="row">
-              <label>
-                Fit
-                <select value={fit} onChange={(e) => setFit(e.target.value as Fit)}>
-                  <option value="contain">Fit whole image</option>
-                  <option value="cover">Fill and crop</option>
-                </select>
-              </label>
-              <label>
-                Background
-                <span className="bg-picker">
-                  <select
-                    value={background === null ? 'none' : 'color'}
-                    onChange={(e) => setBackground(e.target.value === 'none' ? null : '#ffffff')}
-                  >
-                    <option value="none">Transparent</option>
-                    <option value="color">Solid color</option>
-                  </select>
-                  {background !== null && (
-                    <input type="color" value={background} onChange={(e) => setBackground(e.target.value)} />
-                  )}
+              <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
+                <span className="empty-icon">
+                  <ImagePlus size={22} strokeWidth={1.75} />
                 </span>
-              </label>
-            </div>
-            <label>
-              Padding {Math.round(padding * 100)}%
-              <input
-                type="range"
-                min={0}
-                max={0.3}
-                step={0.01}
-                value={padding}
-                onChange={(e) => setPadding(Number(e.target.value))}
-              />
-            </label>
-          </details>
-        </section>
-
-        <section className="panel preview">
-          {source ? (
-            <>
-              <div className="stage checker">
-                <EmojiCanvas source={source} animation={animation} options={options} size={192} />
+                <strong>Drop an image, or describe one below</strong>
+                <span>PNG, JPG, GIF or WebP. Pasting works too.</span>
+              </button>
+            )}
+            {generating && (
+              <div className="busy" role="status">
+                <LoaderCircle className="spin" size={18} />
+                Generating
               </div>
+            )}
+          </div>
 
-              <div className="chat-previews">
-                {(['light', 'dark'] as const).map((theme) => (
-                  <div key={theme} className={`chat ${theme}`}>
-                    <div className="msg">
-                      <span className="avatar" aria-hidden />
-                      <div>
-                        <strong>you</strong>
-                        <p>
-                          shipped it{' '}
-                          <EmojiCanvas
-                            source={source}
-                            animation={animation}
-                            options={options}
-                            size={platform.displaySizes[0]}
-                            className="inline-emoji"
-                          />
-                        </p>
-                      </div>
-                    </div>
-                    <EmojiCanvas
-                      source={source}
-                      animation={animation}
-                      options={options}
-                      size={platform.displaySizes[1]}
-                      className="big-emoji"
-                    />
-                  </div>
+          {source && <ChatPreview source={source} animation={animation} options={options} name={emojiName} />}
+
+          <div className="composer-wrap">
+            {history.length > 0 && (
+              <div className="history" aria-label="Recent images">
+                {history.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    className={`history-item checker${h.id === activeId ? ' is-active' : ''}`}
+                    onClick={() => setActiveId(h.id)}
+                    aria-label={`Use ${h.name}`}
+                    aria-pressed={h.id === activeId}
+                  >
+                    <img src={h.thumb} alt="" />
+                  </button>
                 ))}
               </div>
+            )}
 
-              <div className="export">
-                <label>
-                  Emoji name
-                  <div className="name-input">
-                    <span>:</span>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onBlur={() => setName((n) => sanitizeName(n || 'moji', platformId))}
-                      placeholder="party_parrot"
-                    />
-                    <span>:</span>
-                  </div>
-                </label>
+            <form
+              className="composer"
+              onSubmit={(e) => {
+                e.preventDefault()
+                generate()
+              }}
+            >
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => fileInput.current?.click()}
+                aria-label="Upload an image"
+                title="Upload an image"
+              >
+                <Upload size={18} />
+              </button>
+              <input
+                className="composer-input"
+                value={prompt}
+                maxLength={MAX_PROMPT}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe an emoji, like a tiny taco wearing sunglasses"
+                aria-label="Describe an emoji"
+              />
+              <select
+                className="style-select"
+                value={style}
+                onChange={(e) => setStyle(e.target.value as StyleId)}
+                aria-label="Style"
+              >
+                {STYLES.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="send"
+                disabled={!prompt.trim() || generating}
+                aria-label="Generate"
+                title="Generate"
+              >
+                {generating ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}
+              </button>
+            </form>
+            <p className="composer-note">
+              <Sparkles size={13} />
+              {generator.isReal
+                ? remaining !== null
+                  ? `${remaining} AI generations left today`
+                  : 'AI generation, with transparent backgrounds'
+                : 'Offline preview: AI generation is not connected in this build'}
+            </p>
+          </div>
 
-                <div className={`status ${result && !exporting ? (result.withinLimit ? 'ok' : 'bad') : ''}`}>
-                  {exporting || !result ? (
-                    'Sizing for ' + platform.label + '…'
-                  ) : (
-                    <>
-                      <strong>{result.withinLimit ? '✓ Ready for ' + platform.label : 'Over the size limit'}</strong>
-                      <span>
-                        {result.size}×{result.size} {result.extension.toUpperCase()} · {formatBytes(result.bytes)} of{' '}
-                        {formatBytes(platform.maxBytes)}
-                        {result.frames > 1 && ` · ${result.frames} frames`}
-                        {result.colors && result.colors < 256 && ` · ${result.colors} colors`}
-                      </span>
-                      {!result.withinLimit && (
-                        <span>Try Fill and crop, a simpler animation, or a solid background.</span>
+          <input
+            ref={fileInput}
+            type="file"
+            accept={ACCEPT}
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onFile(file)
+              e.target.value = ''
+            }}
+          />
+        </section>
+
+        <div className="sidebar">
+          <section className="inspector" aria-label="Settings">
+            <div className="group">
+              <h2>Destination</h2>
+              <Segmented label="Destination" options={PLATFORM_OPTIONS} value={platformId} onChange={setPlatformId} />
+              {platformId === 'custom' ? (
+                <div className="field-row">
+                  <label className="field">
+                    <span>Size</span>
+                    <div className="input-suffix">
+                      <input
+                        type="number"
+                        min={16}
+                        max={512}
+                        value={customSize}
+                        onChange={(e) => setCustomSize(Math.min(512, Math.max(16, Number(e.target.value) || 128)))}
+                      />
+                      <span>px</span>
+                    </div>
+                  </label>
+                  <label className="field">
+                    <span>Max file</span>
+                    <div className="input-suffix">
+                      <input
+                        type="number"
+                        min={8}
+                        max={5120}
+                        value={customKb}
+                        onChange={(e) => setCustomKb(Math.min(5120, Math.max(8, Number(e.target.value) || 256)))}
+                      />
+                      <span>KB</span>
+                    </div>
+                  </label>
+                </div>
+              ) : (
+                <p className="hint">{specLine}</p>
+              )}
+            </div>
+
+            <div className="group">
+              <h2>Motion</h2>
+              <div className="motions" role="radiogroup" aria-label="Motion">
+                {ANIMATIONS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={animationId === a.id}
+                    className={`motion${animationId === a.id ? ' is-active' : ''}`}
+                    onClick={() => setAnimationId(a.id)}
+                  >
+                    <span className="motion-thumb">
+                      {source ? (
+                        <EmojiCanvas source={source} animation={a} options={options} size={36} />
+                      ) : (
+                        <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
                       )}
-                    </>
-                  )}
-                </div>
-
-                <div className="actions">
-                  <button className="primary" onClick={download} disabled={!result || exporting}>
-                    Download {fileName}
+                    </span>
+                    <span>{a.label}</span>
                   </button>
-                  {supabase && (
-                    <button onClick={share} disabled={!result || exporting || sharing}>
-                      {sharing ? 'Uploading…' : 'Get a share link'}
-                    </button>
-                  )}
+                ))}
+              </div>
+            </div>
+
+            <div className="group">
+              <h2>Adjust</h2>
+              <div className="setting">
+                <span>Framing</span>
+                <Segmented
+                  label="Framing"
+                  size="sm"
+                  options={[
+                    { value: 'contain', label: 'Fit' },
+                    { value: 'cover', label: 'Fill' },
+                  ]}
+                  value={fit}
+                  onChange={setFit}
+                />
+              </div>
+              <label className="setting">
+                <span>Padding</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={0.3}
+                  step={0.01}
+                  value={padding}
+                  onChange={(e) => setPadding(Number(e.target.value))}
+                />
+                <output>{Math.round(padding * 100)}%</output>
+              </label>
+              <div className="setting">
+                <span>Background</span>
+                <div className="bg-options">
+                  <button
+                    type="button"
+                    className={`swatch swatch-none checker${background === null ? ' is-active' : ''}`}
+                    onClick={() => setBackground(null)}
+                    aria-label="Transparent background"
+                    aria-pressed={background === null}
+                  />
+                  <label
+                    className={`swatch${background !== null ? ' is-active' : ''}`}
+                    style={{ background: background ?? '#ffffff' }}
+                    title="Solid color"
+                  >
+                    <input
+                      type="color"
+                      value={background ?? '#ffffff'}
+                      onChange={(e) => setBackground(e.target.value)}
+                      aria-label="Background color"
+                    />
+                  </label>
                 </div>
-                {shareUrl && (
-                  <p className="share">
-                    <a href={shareUrl} target="_blank" rel="noreferrer">
-                      {shareUrl}
-                    </a>
-                  </p>
+              </div>
+              <label className="setting toggle">
+                <span>Trim empty edges</span>
+                <input type="checkbox" role="switch" checked={trim} onChange={(e) => setTrim(e.target.checked)} />
+              </label>
+            </div>
+
+            <div className="group export">
+              <label className="field">
+                <span>Name</span>
+                <div className="input-affix">
+                  <span>:</span>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={() => name && setName(sanitizeName(name, platformId))}
+                    placeholder={emojiName}
+                    spellCheck={false}
+                  />
+                  <span>:</span>
+                </div>
+              </label>
+
+              <div className={`status${result ? (result.withinLimit ? ' is-ok' : ' is-over') : ''}`} aria-live="polite">
+                {!source ? (
+                  'Add an image to export'
+                ) : exporting || !result ? (
+                  `Sizing for ${platform.label}…`
+                ) : (
+                  <>
+                    <span className="status-dot" />
+                    <span>
+                      {result.withinLimit ? 'Ready' : 'Over limit'} · {result.size}×{result.size}{' '}
+                      {result.extension.toUpperCase()} · {formatBytes(result.bytes)} of {formatBytes(platform.maxBytes)}
+                    </span>
+                  </>
                 )}
               </div>
-            </>
-          ) : (
-            <div className="empty">
-              <div className="stage checker" />
-              <p>Upload an image or describe one to see your emoji here.</p>
+              {result && !result.withinLimit && (
+                <p className="hint">Try Fill framing, a simpler motion, or a solid background.</p>
+              )}
+
+              <button type="button" className="primary" onClick={download} disabled={!result || exporting}>
+                <Download size={16} />
+                Download {fileName}
+              </button>
             </div>
-          )}
-          {error && <p className="error">{error}</p>}
-        </section>
+          </section>
+
+          <AdSlot format="rectangle" />
+        </div>
       </main>
 
-      <footer className="foot muted">
-        Everything happens in your browser. Nothing is uploaded unless you ask for a share link.
+      {error && (
+        <div className="toast" role="alert">
+          {error}
+          <button type="button" onClick={() => setError(null)} aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      )}
+
+      <AdSlot format="banner" />
+
+      <footer className="footer">
+        Images you upload never leave your browser. Descriptions are sent to the image model only when you generate.
       </footer>
     </div>
   )

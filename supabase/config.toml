@@ -4,3 +4,8 @@ project_id = "moji"
 [auth]
 site_url = "https://moji.locker"
 additional_redirect_urls = ["http://localhost:5173"]
+
+# Called from the browser with the publishable key (not a JWT), so the platform
+# JWT check is off; the function enforces its own origin check and rate limits.
+[functions.generate-emoji]
+verify_jwt = false

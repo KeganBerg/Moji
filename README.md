@@ -4,13 +4,13 @@ A quick, clean one-stop shop for custom emoji. Upload an image (or describe one)
 
 ## What it does
 
-- **Start from an upload or a prompt.** Drag and drop, paste, or pick a file. Transparent edges are trimmed so the emoji fills the square. Prompt-to-emoji is wired through a generator interface; see [AI generation](#ai-generation).
+- **Start from an upload or a prompt.** Drag and drop, paste, or pick a file, or describe an emoji and pick a style. Transparent edges are trimmed so the emoji fills the square.
 - **Auto-scale per app.** Presets for Slack and Discord, plus a custom size and file limit for anything else.
 - **Preset animations.** Spin, bounce, shake, pulse, wiggle, party (hue cycle) and float, exported as looping transparent GIFs.
 - **Always under the limit.** Export steps down colors, then frame count, then canvas size until the file fits, and shows what it did.
 - **See it in context.** Live previews at real chat sizes on light and dark backgrounds.
 
-Everything runs in the browser. Nothing is uploaded unless Supabase is configured and the user asks for a share link.
+Uploads never leave the browser. Only generation descriptions go to the server.
 
 ## Platform requirements
 
@@ -36,25 +36,39 @@ npm run build
 
 ## Deploy
 
-**Netlify** hosts the web app. `netlify.toml` sets the build (`npm run build` → `dist`) and the SPA fallback. Connect the repo in Netlify, add the env vars below under Site configuration → Environment variables, and add `moji.locker` as the production domain under Domain management.
+**Netlify** hosts the web app. `netlify.toml` sets the build (`npm run build` → `dist`) and the SPA fallback. Add `moji.locker` as the production domain under Domain management.
 
-**Supabase** is the backend and is optional for v1:
-
-| Variable                 | Purpose                               |
-| ------------------------ | ------------------------------------- |
-| `VITE_SUPABASE_URL`      | Project URL                           |
-| `VITE_SUPABASE_ANON_KEY` | Public anon key (safe in the browser) |
-| `VITE_EMOJI_GENERATOR`   | `placeholder` (default) or `supabase` |
-
-Copy `.env.example` to `.env.local` for local development. Never commit keys.
-
-- In Supabase, set Authentication → URL Configuration → Site URL to `https://moji.locker` before adding sign-in.
-- `supabase/migrations/…_emoji_bucket.sql` creates the public `emojis` storage bucket used by **Get a share link** (`supabase db push`).
-- `supabase/functions/generate-emoji` is the Edge Function for prompt-to-emoji (`supabase functions deploy generate-emoji`).
+**Supabase** (project "Moji") runs AI generation. `.env.production` holds the project URL and publishable key; both are public by design, so production builds need no Netlify env vars. For local development copy `.env.example` to `.env.local`.
 
 ## AI generation
 
-No image model is connected yet. `src/lib/generate.ts` defines an `EmojiGenerator` interface; today it uses `PlaceholderGenerator`, which draws the prompt as a badge so the rest of the flow works end to end. To go live, pick a provider, call it from `supabase/functions/generate-emoji/index.ts` with its key stored via `supabase secrets set`, and set `VITE_EMOJI_GENERATOR=supabase`.
+The browser calls the `generate-emoji` Edge Function, which holds the OpenAI key and talks to the model. It uses **GPT Image 2 at low quality** (about $0.005 per image) with a native transparent background, falling back to GPT Image 1 Mini if transparency is refused. Emoji end up at 128 px, so higher quality tiers cost 10x more for detail nobody can see.
+
+Cost controls in the function:
+
+- **Cache**: the same description and style return the stored image for free.
+- **Per-visitor limit**: 15 new images per visitor per day (visitors are a hashed IP plus date; raw IPs are never stored).
+- **Global cap**: 300 paid images per day across everyone, so the worst case is about $1.50/day.
+- **Origin check**: only moji.locker and localhost can call it.
+
+The prompt template pins the model to one centered subject, no scenery and no invented text, which is what keeps it from adding things you didn't ask for.
+
+Setup and tuning, in Supabase → Edge Functions → Secrets:
+
+| Secret                    | Default                |
+| ------------------------- | ---------------------- |
+| `OPENAI_API_KEY`          | required               |
+| `IMAGE_MODEL`             | `gpt-image-2`          |
+| `IMAGE_QUALITY`           | `low`                  |
+| `DAILY_LIMIT_PER_VISITOR` | `15`                   |
+| `DAILY_LIMIT_GLOBAL`      | `300`                  |
+| `ALLOWED_ORIGINS`         | moji.locker, localhost |
+
+`supabase/migrations/` creates the private cache bucket and the `generation_log` table; `supabase functions deploy generate-emoji --no-verify-jwt` deploys the function.
+
+## Ad space
+
+The layout reserves a 300×250 slot under the settings panel on desktop and a 320×100 banner at the bottom on phones, outside the editing flow so ads never push controls around. Set `VITE_AD_SLOTS=show` to see placeholders; drop the ad network's tag into `src/components/AdSlot.tsx`.
 
 ## Code map
 
@@ -62,5 +76,5 @@ No image model is connected yet. `src/lib/generate.ts` defines an `EmojiGenerato
 - `src/lib/animations.ts` preset animations as per-frame transforms
 - `src/lib/render.ts` image loading, trimming, frame drawing
 - `src/lib/export.ts` PNG/GIF export with the size-fitting ladder
-- `src/lib/generate.ts` prompt-to-emoji interface
-- `src/lib/supabase.ts` optional Supabase client and share upload
+- `src/lib/generate.ts` generation client (Edge Function or offline placeholder)
+- `supabase/functions/generate-emoji` generation backend
