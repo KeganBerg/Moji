@@ -185,3 +185,37 @@ describe('background cutout', () => {
     expect(m.at(22, 18)).toBe(255)
   })
 })
+
+describe('chaos', () => {
+  function disc(size = 32) {
+    const d = new Uint8ClampedArray(size * size * 4)
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4
+        if ((x - 15.5) ** 2 + (y - 15.5) ** 2 < 12 ** 2) d.set([60, 140, 220, 255], i)
+      }
+    return d
+  }
+  const opaque = (d: Uint8ClampedArray) => d.filter((_, i) => i % 4 === 3 && d[i] > 0).length
+
+  it('does nothing at 0', () => {
+    const d = disc()
+    const before = [...d]
+    tunePixels(d, 32, 32, { ...DEFAULT_TUNE, chaos: 0 })
+    expect([...d]).toEqual(before)
+  })
+  it('bulges the shape without breaking it apart, and fries the colors', () => {
+    const d = disc()
+    const area = opaque(d)
+    tunePixels(d, 32, 32, { ...DEFAULT_TUNE, chaos: 100 })
+    // The fisheye swells the subject toward the frame edge but never past it.
+    expect(opaque(d)).toBeGreaterThan(area)
+    expect(opaque(d)).toBeLessThan(32 * 32 * 0.8)
+    expect(d[3]).toBe(0)
+    const center = (15 * 32 + 15) * 4
+    // Colors blow out: the blue gets bluer and the red drains away.
+    expect(d[center]).toBeLessThan(60)
+    expect(d[center + 2]).toBeGreaterThan(220)
+    expect(d[center + 3]).toBe(255)
+  })
+})
