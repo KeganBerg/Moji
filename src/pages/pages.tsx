@@ -55,6 +55,16 @@ const FAQ: { q: string; a: ReactNode }[] = [
     ),
   },
   {
+    q: 'Can it remove the background from my photo?',
+    a: (
+      <>
+        Yes. When an upload has a plain background, like a moon on black or a logo on white, Moji Locker cuts the
+        subject out automatically. Switch Background between Remove and Keep, and raise Strength if some background is
+        left behind. It runs in your browser, so the photo still never leaves your device.
+      </>
+    ),
+  },
+  {
     q: 'Can I combine motions?',
     a: <>Yes. Pick several under Motion, like Party and Bounce, and they play together. Static clears them.</>,
   },

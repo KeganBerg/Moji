@@ -18,12 +18,16 @@ import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
-import { DEFAULT_RENDER, loadImage, prepareSource, type Fit, type RenderOptions } from './lib/render'
+import { DEFAULT_STRENGTH } from './lib/cutout'
+import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type RenderOptions } from './lib/render'
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 
 interface HistoryItem {
   id: number
   image: HTMLImageElement
+  /** Cut the subject out of its background, chosen per image. */
+  cutout: boolean
+  cutoutStrength: number
   thumb: string
   name: string
 }
@@ -78,7 +82,12 @@ export default function App() {
     () => ({ fit, padding, background, rotation, flip }),
     [fit, padding, background, rotation, flip],
   )
-  const prepared = useMemo(() => (active ? prepareSource(active.image, trim) : null), [active, trim])
+  const prepared = useMemo(
+    () => (active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null) : null),
+    [active, trim],
+  )
+  const updateActive = (patch: Partial<HistoryItem>) =>
+    setHistory((h) => h.map((item) => (item.id === activeId ? { ...item, ...patch } : item)))
   const source = useMemo(() => (prepared ? applyTune(prepared, tune) : null), [prepared, tune])
   // Quarter turns snap to the nearest 90° and wrap into -180..180.
   const turn = (dir: 1 | -1) =>
@@ -93,11 +102,15 @@ export default function App() {
   const extension = animation.frames > 1 ? 'gif' : 'png'
   const fileName = `${emojiName}.${extension}`
 
-  const addImage = useCallback(async (blob: Blob, suggestedName: string) => {
+  const addImage = useCallback(async (blob: Blob, suggestedName: string, fromUpload: boolean) => {
     const image = await loadImage(blob)
     const item: HistoryItem = {
       id: nextId.current++,
       image,
+      // Uploads on a plain background (a moon on black, a logo on white) get cut out
+      // automatically. Generated images already come with a transparent background.
+      cutout: fromUpload && looksCuttable(image),
+      cutoutStrength: DEFAULT_STRENGTH,
       thumb: URL.createObjectURL(blob),
       name: sanitizeName(suggestedName, 'discord'),
     }
@@ -118,7 +131,7 @@ export default function App() {
     async (file: File) => {
       setError(null)
       try {
-        await addImage(file, file.name.replace(/\.[^.]+$/, ''))
+        await addImage(file, file.name.replace(/\.[^.]+$/, ''), true)
       } catch (e) {
         setError((e as Error).message)
       }
@@ -137,7 +150,7 @@ export default function App() {
     try {
       const out = await generator.generate({ prompt: text, style }, controller.signal)
       if (out.remaining !== null) setRemaining(out.remaining)
-      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'))
+      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false)
     } catch (e) {
       if ((e as Error).name !== 'AbortError') setError((e as Error).message)
     } finally {
@@ -401,6 +414,34 @@ export default function App() {
             <div className="group">
               <h2>Adjust</h2>
               <div className="setting">
+                <span>Background</span>
+                <Segmented
+                  label="Background"
+                  size="sm"
+                  options={[
+                    { value: 'keep', label: 'Keep' },
+                    { value: 'remove', label: 'Remove' },
+                  ]}
+                  value={active?.cutout ? 'remove' : 'keep'}
+                  onChange={(v) => updateActive({ cutout: v === 'remove' })}
+                />
+              </div>
+              {active?.cutout && (
+                <label className="setting">
+                  <span>Strength</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={active.cutoutStrength}
+                    onChange={(e) => updateActive({ cutoutStrength: Number(e.target.value) })}
+                    onDoubleClick={() => updateActive({ cutoutStrength: DEFAULT_STRENGTH })}
+                  />
+                  <output>{active.cutoutStrength}</output>
+                </label>
+              )}
+              <div className="setting">
                 <span>Framing</span>
                 <Segmented
                   label="Framing"
@@ -459,7 +500,7 @@ export default function App() {
                 </div>
               </div>
               <div className="setting">
-                <span>Background</span>
+                <span>Fill color</span>
                 <div className="bg-options">
                   <button
                     type="button"
