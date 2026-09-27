@@ -1,8 +1,8 @@
 import { SiteFooter, SiteHeader } from '../components/SiteChrome'
-import { PAGES } from './pages'
+import { getPage } from './pages'
 
 export function InfoPage({ page: key }: { page: string }) {
-  const page = PAGES[key]
+  const page = getPage(key)
   return (
     <div className="shell">
       <SiteHeader />

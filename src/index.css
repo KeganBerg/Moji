@@ -6,12 +6,12 @@
   --border-strong: #d4d4d8;
   --text: #09090b;
   --text-2: #52525b;
-  --text-3: #a1a1aa;
+  --text-3: #6b6b74;
   --accent: #4f46e5;
   --accent-soft: rgb(79 70 229 / 0.08);
   --primary: #18181b;
   --primary-text: #fafafa;
-  --ok: #16a34a;
+  --ok: #15803d;
   --over: #dc2626;
   --warn: #b45309;
   --warn-soft: #fef3c7;
@@ -47,7 +47,7 @@
     --border-strong: #34343b;
     --text: #fafafa;
     --text-2: #a1a1aa;
-    --text-3: #63636b;
+    --text-3: #8b8b94;
     --accent: #818cf8;
     --accent-soft: rgb(129 140 248 / 0.12);
     --primary: #fafafa;
@@ -580,13 +580,14 @@ h2 {
 
 .segmented-sm button {
   height: 26px;
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .motions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -599,6 +600,10 @@ h2 {
   border-radius: 10px;
   border: 1px solid transparent;
   font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
   color: var(--text-2);
   transition:
     background 0.15s,
@@ -730,15 +735,26 @@ h2 {
 
 .setting {
   display: grid;
-  grid-template-columns: 96px 1fr auto;
+  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 32px;
   color: var(--text-2);
 }
 
+/* Rows with a segmented control wrap it under the label when a translation is too long. */
+.setting:has(> .segmented) {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.setting:has(> .segmented) > span {
+  min-width: 96px;
+}
+
 .setting > .segmented {
-  grid-column: 2 / 4;
+  flex: 1 0 auto;
 }
 
 .setting output {
@@ -826,6 +842,11 @@ input[type='range'] {
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.swatch:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .toggle {
@@ -990,10 +1011,19 @@ input[role='switch']:checked::after {
   font-weight: 550;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   transition:
     opacity 0.15s,
     transform 0.1s;
+}
+
+.primary > svg {
+  flex-shrink: 0;
+}
+
+.primary-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .primary:hover:not(:disabled) {
@@ -1440,9 +1470,8 @@ input[role='switch']:checked::after {
 }
 
 .group-head .hint {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  text-align: end;
 }
 
 .history-row {
@@ -1670,7 +1699,7 @@ input[role='switch']:checked::after {
   --border-strong: #3a2f27;
   --text: #f7efe6;
   --text-2: #b8a99b;
-  --text-3: #75685c;
+  --text-3: #a3927f;
   --accent: #fb8a2e;
   --accent-soft: rgb(251 138 46 / 0.14);
   --primary: #f97316;
@@ -1823,4 +1852,22 @@ input[role='switch']:checked::after {
 .info .info-cta a.slack-install {
   padding: 0;
   background: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 360px) {
+  .motion {
+    font-size: 11px;
+  }
 }

@@ -39,9 +39,16 @@ export function gifLadder(size: number): GifAttempt[] {
 export function frameTiming(anim: Animation, maxFrames: number, frameStep: number): { count: number; delay: number } {
   let count = Math.ceil(anim.frames / frameStep)
   count = Math.max(2, Math.min(count, maxFrames))
-  // Browsers treat delays under 20 ms as 100 ms, so never go below that.
-  const delay = Math.max(20, Math.round(anim.duration / count / 10) * 10)
-  return { count, delay }
+  // GIF delays are whole centiseconds, and browsers treat delays under 20 ms
+  // as 100 ms. Prefer a delay that divides the duration exactly so the GIF
+  // loops at the same speed as the preview.
+  let best: { count: number; delay: number } | null = null
+  for (let delay = 20; delay <= anim.duration / 2; delay += 10) {
+    const n = anim.duration / delay
+    if (!Number.isInteger(n) || n > maxFrames) continue
+    if (!best || Math.abs(n - count) < Math.abs(best.count - count)) best = { count: n, delay }
+  }
+  return best ?? { count, delay: Math.max(20, Math.round(anim.duration / count / 10) * 10) }
 }
 
 function renderFrames(
@@ -95,9 +102,11 @@ export async function exportPng(
   size: number,
   opts: RenderOptions,
   platform: Platform,
+  signal?: AbortSignal,
 ): Promise<ExportResult> {
   let best: ExportResult | null = null
   for (const s of [size, Math.round(size * 0.875), Math.round(size * 0.75), Math.round(size * 0.5)]) {
+    signal?.throwIfAborted()
     const canvas = makeCanvas(s, s)
     drawFrame(ctx2d(canvas), source, s, opts, {}, 1)
     const blob = await canvasToBlob(canvas, 'image/png')
@@ -122,10 +131,13 @@ export async function exportGif(
   opts: RenderOptions,
   anim: Animation,
   platform: Platform,
+  signal?: AbortSignal,
 ): Promise<ExportResult> {
   const cache = new Map<string, Uint8ClampedArray[]>()
   let best: ExportResult | null = null
   for (const attempt of gifLadder(size)) {
+    // A newer change replaced this export; stop instead of finishing the ladder.
+    signal?.throwIfAborted()
     const { count, delay } = frameTiming(anim, platform.maxFrames, attempt.frameStep)
     const key = `${attempt.size}:${count}`
     let frames = cache.get(key)
