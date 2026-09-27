@@ -395,7 +395,7 @@ export default function App() {
                 value={prompt}
                 maxLength={MAX_PROMPT}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe an emoji, like a tiny taco wearing sunglasses"
+                placeholder="Describe anything…"
                 aria-label="Describe an emoji"
               />
               <select
