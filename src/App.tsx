@@ -2,6 +2,7 @@ import {
   ArrowUp,
   Download,
   FlipHorizontal2,
+  Ghost,
   Images,
   ImagePlus,
   LoaderCircle,
@@ -31,6 +32,7 @@ import {
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_STRENGTH } from './lib/cutout'
+import { useSeason } from './lib/season'
 import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type RenderOptions } from './lib/render'
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 
@@ -54,6 +56,7 @@ const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
 }))
 
 export default function App() {
+  const season = useSeason()
   const generator = useMemo(() => getGenerator(), [])
   const fileInput = useRef<HTMLInputElement>(null)
   const canvasBox = useRef<HTMLDivElement>(null)
@@ -326,8 +329,8 @@ export default function App() {
               <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
-                <span className="empty-icon">
-                  <ImagePlus size={22} strokeWidth={1.75} />
+                <span className={`empty-icon${season.on ? ' is-ghost' : ''}`}>
+                  {season.on ? <Ghost size={22} strokeWidth={1.75} /> : <ImagePlus size={22} strokeWidth={1.75} />}
                 </span>
                 <strong>Drop an image, or describe one below</strong>
                 <span>PNG, JPG, GIF or WebP. Pasting works too.</span>
