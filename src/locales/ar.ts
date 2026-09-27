@@ -54,7 +54,7 @@ const ar: Messages = {
   motionFloat: 'طفو',
   motionJiggle: 'ارتجاف',
   motionHeartbeat: 'دقات القلب',
-  motionFlip: 'قلب',
+  motionFlip: 'تقليب',
   motionSwing: 'تأرجح',
   adjust: 'ضبط',
   reset: 'إعادة تعيين',

@@ -53,7 +53,7 @@ const pt: Messages = {
   motionParty: 'Festa',
   motionFloat: 'Flutuar',
   motionJiggle: 'Tremer',
-  motionHeartbeat: 'Pulsação',
+  motionHeartbeat: 'Coração batendo',
   motionFlip: 'Virar',
   motionSwing: 'Balançar',
   adjust: 'Ajustar',
