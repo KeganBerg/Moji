@@ -1352,7 +1352,7 @@ input[role='switch']:checked::after {
   /* On phones and small tablets, Download is a bar fixed to the bottom of the
      screen, so it's in reach from anywhere on the page. */
   .shell {
-    padding-bottom: 180px;
+    padding-bottom: calc(var(--export-bar-h, 200px) + 24px);
   }
 
   .group.export {
@@ -1404,8 +1404,9 @@ input[role='switch']:checked::after {
 }
 
 @media (max-width: 560px) {
+  /* Sides only: the bottom padding keeps room for the fixed Download bar. */
   .shell {
-    padding: 0 16px 24px;
+    padding-inline: 16px;
   }
 
   .canvas {

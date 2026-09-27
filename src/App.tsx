@@ -62,6 +62,8 @@ export default function App() {
   const canvasBox = useRef<HTMLDivElement>(null)
   const previewSize = usePreviewSize(canvasBox)
   const previewInView = useInView(canvasBox)
+  const exportBar = useRef<HTMLDivElement>(null)
+  useHeightVar(exportBar, '--export-bar-h')
   const abortRef = useRef<AbortController | null>(null)
   const nextId = useRef(1)
 
@@ -673,7 +675,7 @@ export default function App() {
               ))}
             </div>
 
-            <div className="group export">
+            <div className="group export" ref={exportBar}>
               {source && (
                 <div className="export-thumb checker" aria-hidden>
                   <EmojiCanvas source={source} animation={animation} options={options} size={44} />
@@ -796,6 +798,22 @@ function usePreviewSize(ref: RefObject<HTMLDivElement | null>) {
     return () => observer.disconnect()
   }, [ref])
   return size
+}
+
+/** Publishes an element's rendered height as a CSS variable on the page root, so the
+    page can leave room under the phone Download bar however tall it grows. */
+function useHeightVar(ref: RefObject<HTMLElement | null>, name: string) {
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => root.style.setProperty(name, `${el.offsetHeight}px`))
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty(name)
+    }
+  }, [ref, name])
 }
 
 /** Whether most of an element is on screen, including inside scrolling panels. */
