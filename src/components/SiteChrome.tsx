@@ -1,7 +1,7 @@
 import { Ghost } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { setSeasonOff, useSeason } from '../lib/season'
-import { FEEDBACK_URL } from '../lib/site'
+import { FEEDBACK_URL, SUPPORT_URL } from '../lib/site'
 
 /** The top bar. Children sit on the right, opposite the wordmark. */
 export function SiteHeader({ children }: { children?: ReactNode }) {
@@ -58,6 +58,7 @@ export function SiteFooter() {
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href={FEEDBACK_URL}>Send feedback</a>
+        <a href={SUPPORT_URL}>Support</a>
       </nav>
     </footer>
   )

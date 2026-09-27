@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Mail } from '../components/InfoLinks'
 import { SlackInstall } from '../components/SlackInstall'
-import { FEEDBACK_URL } from '../lib/site'
+import { FEEDBACK_URL, SUPPORT_EMAIL, SUPPORT_URL } from '../lib/site'
 import { GUIDE_PAGES } from './guides'
 
 const UPDATED = 'September 27, 2026'
@@ -98,7 +98,8 @@ const BASE_PAGES: Record<string, Page> = {
     heading: 'Questions',
     lede: (
       <>
-        Something missing? <a href={FEEDBACK_URL}>Send feedback</a> and we'll add it.
+        Something missing? <a href={FEEDBACK_URL}>Send feedback</a> and we'll add it. Need help?{' '}
+        <a href={SUPPORT_URL}>Contact support</a>.
       </>
     ),
     body: (
@@ -214,6 +215,10 @@ const BASE_PAGES: Record<string, Page> = {
           The Slack app shares the website's daily AI limits, counted per Slack user. It receives your description and
           your workspace and user IDs, which it hashes to enforce limits. It can't read your messages or channels. See
           the <a href="/privacy">privacy policy</a> for details.
+        </p>
+        <h2>Support</h2>
+        <p>
+          Questions or problems with the Slack app? Email <a href={SUPPORT_URL}>{SUPPORT_EMAIL}</a>.
         </p>
       </>
     ),

@@ -2,6 +2,10 @@ export const CONTACT_EMAIL = 'hello@moji.locker'
 
 export const FEEDBACK_URL = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Moji Locker feedback')}`
 
+export const SUPPORT_EMAIL = 'support@moji.locker'
+
+export const SUPPORT_URL = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Moji Locker support')}`
+
 export const SITE_URL = 'https://moji.locker'
 
 // Cloudflare Web Analytics: cookieless, no personal data. Only loads when a
