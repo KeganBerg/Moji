@@ -1,6 +1,6 @@
 // Turns a generated 1024 px PNG into a Slack-ready emoji: transparent edges
-// trimmed, centered on a square with the website's default 4% padding, and scaled to 128 x 128 (well under Slack's
-// 128 KB limit).
+// trimmed, centered on a square with the website's default 4% padding, and
+// scaled to 128 x 128 (well under Slack's 128 KB limit).
 
 import { Image } from 'npm:imagescript@1.3.0'
 
