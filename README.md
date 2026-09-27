@@ -83,6 +83,12 @@ Setup:
 3. Deploy: `supabase functions deploy slack-command --no-verify-jwt` and `supabase functions deploy slack-oauth --no-verify-jwt`.
 4. **Install App** adds it to your own workspace. To let anyone install it from moji.locker/slack, turn on **Manage Distribution → Activate Public Distribution** and set `SLACK_CLIENT_ID` in `src/lib/site.ts`, which shows the Add to Slack button.
 
+## Languages
+
+The editor is available in 15 languages, picked from the globe button next to Gallery. English (`src/locales/en.ts`) is the source and ships with the page; the other languages load only when someone picks them, and the choice is remembered in the browser. Arabic switches the page to right to left. Guides, the FAQ and the legal pages stay in English.
+
+To change wording, edit `en.ts` and the same key in every other file in `src/locales/`. `npm test` checks that every language has every key, keeps each `{placeholder}`, and leaves Moji Locker, moji.locker, /moji, Slack, Discord and file formats untranslated.
+
 ## Ads
 
 AdSense (publisher `ca-pub-8080930241819022`) places ads with Auto ads: the loader script is in `index.html` and `public/ads.txt` authorizes the account. Placement is managed in AdSense, not in the code. If Auto ads ever cover the editor, exclude that area in AdSense's Auto ads settings.

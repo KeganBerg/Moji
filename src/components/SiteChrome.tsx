@@ -1,14 +1,16 @@
 import { Ghost } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useI18n } from '../lib/i18n'
 import { setSeasonOff, useSeason } from '../lib/season'
 import { FEEDBACK_URL, SUPPORT_URL } from '../lib/site'
 
 /** The top bar. Children sit on the right, opposite the wordmark. */
 export function SiteHeader({ children }: { children?: ReactNode }) {
   const season = useSeason()
+  const { t } = useI18n()
   return (
     <header className="topbar">
-      <a className="wordmark" href="/" aria-label="Moji Locker home">
+      <a className="wordmark" href="/" aria-label={t('home')}>
         {season.on ? (
           <svg viewBox="0 0 32 32" aria-hidden>
             <rect width="32" height="32" rx="9" />
@@ -33,8 +35,8 @@ export function SiteHeader({ children }: { children?: ReactNode }) {
             className={`icon-button season-toggle${season.on ? ' is-on' : ''}`}
             onClick={() => setSeasonOff(season.on)}
             aria-pressed={season.on}
-            aria-label="Halloween theme"
-            title={season.on ? 'Turn off the Halloween theme' : 'Turn on the Halloween theme'}
+            aria-label={t('halloweenTheme')}
+            title={season.on ? t('halloweenOff') : t('halloweenOn')}
           >
             <Ghost size={17} />
           </button>
@@ -46,19 +48,18 @@ export function SiteHeader({ children }: { children?: ReactNode }) {
 }
 
 export function SiteFooter() {
+  const { t } = useI18n()
   return (
     <footer className="footer">
-      <p>
-        Images you upload never leave your browser. Descriptions are sent to the image model only when you generate.
-      </p>
-      <nav className="footer-links" aria-label="Site">
-        <a href="/guides">Guides</a>
-        <a href="/slack">Slack app</a>
-        <a href="/faq">FAQ</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href={FEEDBACK_URL}>Send feedback</a>
-        <a href={SUPPORT_URL}>Support</a>
+      <p>{t('footerNote')}</p>
+      <nav className="footer-links" aria-label={t('siteLinks')}>
+        <a href="/guides">{t('guides')}</a>
+        <a href="/slack">{t('slackApp')}</a>
+        <a href="/faq">{t('faq')}</a>
+        <a href="/privacy">{t('privacy')}</a>
+        <a href="/terms">{t('terms')}</a>
+        <a href={FEEDBACK_URL}>{t('sendFeedback')}</a>
+        <a href={SUPPORT_URL}>{t('support')}</a>
       </nav>
     </footer>
   )
