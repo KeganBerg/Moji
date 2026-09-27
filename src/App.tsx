@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   ArrowUp,
   Download,
   FlipHorizontal2,
@@ -515,6 +516,12 @@ export default function App() {
                 </div>
               ) : (
                 <p className="hint">{specLine}</p>
+              )}
+              {platformId === 'slack' && (
+                <a className="slack-hint" href="/slack">
+                  Make emoji without leaving Slack with <code>/moji</code>
+                  <ArrowRight size={12} aria-hidden />
+                </a>
               )}
             </div>
 
