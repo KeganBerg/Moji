@@ -58,6 +58,7 @@ export default function App() {
   const fileInput = useRef<HTMLInputElement>(null)
   const canvasBox = useRef<HTMLDivElement>(null)
   const previewSize = usePreviewSize(canvasBox)
+  const previewInView = useInView(canvasBox)
   const abortRef = useRef<AbortController | null>(null)
   const nextId = useRef(1)
 
@@ -658,6 +659,11 @@ export default function App() {
             </div>
 
             <div className="group export">
+              {source && (
+                <div className="export-thumb checker" aria-hidden>
+                  <EmojiCanvas source={source} animation={animation} options={options} size={44} />
+                </div>
+              )}
               <label className="field">
                 <span>Name</span>
                 <div className="input-affix">
@@ -743,6 +749,12 @@ export default function App() {
         </div>
       )}
 
+      {source && !previewInView && (
+        <div className="mini-preview checker" aria-hidden>
+          <EmojiCanvas source={source} animation={animation} options={options} size={64} />
+        </div>
+      )}
+
       <Gallery
         open={galleryOpen}
         items={gallery}
@@ -785,4 +797,19 @@ function usePreviewSize(ref: RefObject<HTMLDivElement | null>) {
     return () => observer.disconnect()
   }, [ref])
   return size
+}
+
+/** Whether most of an element is on screen, including inside scrolling panels. */
+function useInView(ref: RefObject<HTMLElement | null>) {
+  const [inView, setInView] = useState(true)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.intersectionRatio > 0.35), {
+      threshold: [0, 0.35, 1],
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return inView
 }
