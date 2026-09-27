@@ -4,6 +4,7 @@ import '@fontsource-variable/schibsted-grotesk'
 import '@fontsource-variable/bricolage-grotesque'
 import './index.css'
 import App from './App.tsx'
+import { Spooky } from './components/Spooky'
 import { loadAnalytics } from './lib/site'
 import { InfoPage } from './pages/InfoPage'
 import { pageFor } from './pages/pages'
@@ -14,5 +15,8 @@ const page = pageFor(window.location.pathname)
 loadAnalytics()
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{page ? <InfoPage page={page} /> : <App />}</StrictMode>,
+  <StrictMode>
+    <Spooky />
+    {page ? <InfoPage page={page} /> : <App />}
+  </StrictMode>,
 )

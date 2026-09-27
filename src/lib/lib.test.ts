@@ -5,6 +5,7 @@ import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
+import { isHalloweenSeason } from './season'
 
 describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
@@ -217,5 +218,14 @@ describe('chaos', () => {
     expect(d[center]).toBeLessThan(60)
     expect(d[center + 2]).toBeGreaterThan(220)
     expect(d[center + 3]).toBe(255)
+  })
+})
+
+describe('isHalloweenSeason', () => {
+  it('runs from September 15 through October 31', () => {
+    expect(isHalloweenSeason(new Date(2026, 8, 14))).toBe(false)
+    expect(isHalloweenSeason(new Date(2026, 8, 15))).toBe(true)
+    expect(isHalloweenSeason(new Date(2026, 9, 31, 23, 59))).toBe(true)
+    expect(isHalloweenSeason(new Date(2026, 10, 1))).toBe(false)
   })
 })
