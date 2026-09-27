@@ -8,6 +8,10 @@
 //   3. Limits: DAILY_LIMIT_PER_VISITOR new images per visitor per day, and a
 //      DAILY_LIMIT_GLOBAL cap on paid generations across everyone.
 //
+// Safety: every description goes through OpenAI's free moderation model
+// before anything is looked up or drawn, and the image model runs with its
+// own content filter on top.
+//
 // Secrets (Dashboard > Edge Functions > Secrets):
 //   OPENAI_API_KEY            required
 //   IMAGE_MODEL               default gpt-image-2
@@ -87,6 +91,49 @@ async function callModel(model: string, prompt: string): Promise<Response> {
   })
 }
 
+// Moderation categories that block a description. Plain "violence" and
+// "harassment" are left out so spooky or jokey emoji (a skull, a zombie, "rage
+// quit") still work; the graphic and threatening versions are blocked.
+const BLOCKED_CATEGORIES = [
+  'sexual',
+  'sexual/minors',
+  'hate',
+  'hate/threatening',
+  'harassment/threatening',
+  'self-harm',
+  'self-harm/intent',
+  'self-harm/instructions',
+  'violence/graphic',
+  'illicit/violent',
+]
+
+export const BLOCKED_MESSAGE = "That description can't be generated. Try wording it differently."
+
+/** True when the description is allowed. Fails closed: if moderation can't be reached, nothing is generated. */
+async function passesModeration(subject: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: subject }),
+    })
+    if (!res.ok) {
+      console.error('moderation error', res.status, await res.text())
+      return false
+    }
+    const categories: Record<string, boolean> = (await res.json()).results?.[0]?.categories ?? {}
+    const hits = BLOCKED_CATEGORIES.filter((c) => categories[c])
+    if (hits.length) console.warn('description blocked by moderation', hits)
+    return hits.length === 0
+  } catch (e) {
+    console.error('moderation unreachable', e)
+    return false
+  }
+}
+
 /**
  * Returns the emoji for `subject` from the cache, or generates it if `visitor`
  * (a daily hash identifying the requester) and the site are under their limits.
@@ -103,6 +150,7 @@ export async function generateEmoji(
   if (subject.length > MAX_PROMPT) {
     return { ok: false, status: 400, error: `Keep the description under ${MAX_PROMPT} characters` }
   }
+  if (!(await passesModeration(subject))) return { ok: false, status: 400, error: BLOCKED_MESSAGE }
 
   const day = new Date().toISOString().slice(0, 10)
   const cacheKey = await sha256(`${MODEL}|${QUALITY}|${style}|${subject.toLowerCase()}`)
@@ -183,7 +231,7 @@ export async function generateEmoji(
       ok: false,
       status: blocked ? 400 : unavailable ? 503 : 502,
       error: blocked
-        ? "That description can't be generated. Try wording it differently."
+        ? BLOCKED_MESSAGE
         : unavailable
           ? 'AI generation is unavailable right now. Uploads still work.'
           : 'Generation failed. Try again.',
