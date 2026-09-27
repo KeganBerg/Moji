@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 import { FEEDBACK_URL } from '../lib/site'
 
-export function SiteHeader({ tagline = true }: { tagline?: boolean }) {
+/** The top bar. Children sit on the right, opposite the wordmark. */
+export function SiteHeader({ children }: { children?: ReactNode }) {
   return (
     <header className="topbar">
       <a className="wordmark" href="/" aria-label="Moji Locker home">
@@ -12,7 +14,7 @@ export function SiteHeader({ tagline = true }: { tagline?: boolean }) {
         </svg>
         Moji Locker
       </a>
-      {tagline && <p className="topbar-tag">Custom emoji, sized right for Slack and Discord.</p>}
+      {children}
     </header>
   )
 }

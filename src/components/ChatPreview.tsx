@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Animation } from '../lib/animations'
-import { personasFor } from '../lib/chatPersona'
+import { personasFor, type Avatar } from '../lib/chatPersona'
 import type { RenderOptions } from '../lib/render'
 import { EmojiCanvas } from './EmojiCanvas'
 
@@ -20,9 +20,7 @@ export function ChatPreview({ source, animation, options, name, seed }: Props) {
   return (
     <div className="chat-preview">
       <div className="chat chat-light">
-        <span className="chat-avatar" style={{ background: light.gradient }} aria-hidden>
-          {light.initials}
-        </span>
+        <PersonaAvatar avatar={light.avatar} />
         <div className="chat-body">
           <div className="chat-meta">
             <strong>{light.name}</strong>
@@ -37,9 +35,7 @@ export function ChatPreview({ source, animation, options, name, seed }: Props) {
         </div>
       </div>
       <div className="chat chat-dark">
-        <span className="chat-avatar" style={{ background: dark.gradient }} aria-hidden>
-          {dark.initials}
-        </span>
+        <PersonaAvatar avatar={dark.avatar} />
         <div className="chat-body">
           <div className="chat-meta">
             <strong>{dark.name}</strong>
@@ -50,5 +46,17 @@ export function ChatPreview({ source, animation, options, name, seed }: Props) {
         </div>
       </div>
     </div>
+  )
+}
+
+function PersonaAvatar({ avatar }: { avatar: Avatar }) {
+  return (
+    <span
+      className={`chat-avatar${avatar.emoji ? ' is-emoji' : ''}`}
+      style={{ background: avatar.background }}
+      aria-hidden
+    >
+      {avatar.text}
+    </span>
   )
 }
