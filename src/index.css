@@ -1746,3 +1746,24 @@ input[role='switch']:checked::after {
     animation: none;
   }
 }
+
+.info .slack-result {
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.info .slack-result.is-ok {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+.info .slack-result.is-error {
+  border-color: color-mix(in srgb, var(--over) 45%, transparent);
+}
+
+.info .slack-soon {
+  color: var(--text-2);
+  font-size: 14px;
+}

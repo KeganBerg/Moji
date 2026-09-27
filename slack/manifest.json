@@ -1,0 +1,34 @@
+{
+  "_metadata": {
+    "major_version": 1,
+    "minor_version": 1
+  },
+  "display_information": {
+    "name": "Moji Locker",
+    "description": "Make custom emoji for your workspace with /moji.",
+    "background_color": "#16161a",
+    "long_description": "Type /moji and describe an emoji, like /moji a taco wearing sunglasses. Moji Locker draws it, sizes it to Slack's 128 x 128 limits, and replies privately with a download and a link to your workspace's Add Emoji page. Start with a style word to change the look: /moji pixel a happy ghost. For motion, text and uploads, visit moji.locker."
+  },
+  "features": {
+    "slash_commands": [
+      {
+        "command": "/moji",
+        "url": "https://aprzkdcxlrqlgibtafwc.supabase.co/functions/v1/slack-command",
+        "description": "Make a custom emoji from a description",
+        "usage_hint": "a taco wearing sunglasses",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "redirect_urls": ["https://aprzkdcxlrqlgibtafwc.supabase.co/functions/v1/slack-oauth"],
+    "scopes": {
+      "bot": ["commands"]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

@@ -55,6 +55,14 @@ const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
   label: PLATFORMS[id].label,
 }))
 
+function linkedPrompt(): { prompt: string; style: StyleId } | null {
+  if (typeof window === 'undefined') return null
+  const params = new URLSearchParams(window.location.search)
+  const prompt = params.get('prompt')?.trim().slice(0, MAX_PROMPT)
+  if (!prompt) return null
+  return { prompt, style: STYLES.find((s) => s.id === params.get('style'))?.id ?? 'flat' }
+}
+
 export default function App() {
   const season = useSeason()
   const generator = useMemo(() => getGenerator(), [])
@@ -69,8 +77,10 @@ export default function App() {
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
-  const [prompt, setPrompt] = useState('')
-  const [style, setStyle] = useState<StyleId>('flat')
+  // ?prompt=…&style=… (from the Slack app's Edit in Moji Locker button).
+  const [linked] = useState(linkedPrompt)
+  const [prompt, setPrompt] = useState(linked?.prompt ?? '')
+  const [style, setStyle] = useState<StyleId>(linked?.style ?? 'flat')
   const [generating, setGenerating] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -219,6 +229,20 @@ export default function App() {
   }
 
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  // Links from the Slack app open with that emoji already generated; it's a
+  // cache hit, so it's free and doesn't use up the limit.
+  const linkedRun = useRef(false)
+  const generateRef = useRef(generate)
+  useEffect(() => {
+    generateRef.current = generate
+  })
+  useEffect(() => {
+    if (!linked || linkedRun.current) return
+    linkedRun.current = true
+    window.history.replaceState(null, '', window.location.pathname)
+    generateRef.current()
+  }, [linked])
 
   // Pasting an image anywhere loads it.
   useEffect(() => {

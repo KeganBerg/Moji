@@ -9,3 +9,12 @@ additional_redirect_urls = ["http://localhost:5173"]
 # JWT check is off; the function enforces its own origin check and rate limits.
 [functions.generate-emoji]
 verify_jwt = false
+
+# Called by Slack, which signs each request; the function verifies that
+# signature itself (SLACK_SIGNING_SECRET).
+[functions.slack-command]
+verify_jwt = false
+
+# Slack's OAuth redirect after "Add to Slack"; a plain browser GET.
+[functions.slack-oauth]
+verify_jwt = false
