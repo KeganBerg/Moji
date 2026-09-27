@@ -1,8 +1,8 @@
 import {
-  ArrowRight,
   ArrowUp,
   Download,
   FlipHorizontal2,
+  Hash,
   Ghost,
   Images,
   ImagePlus,
@@ -326,6 +326,10 @@ export default function App() {
   return (
     <div className="shell">
       <SiteHeader>
+        <a className="slack-link" href="/slack" title="Make emoji inside Slack with /moji">
+          <Hash size={15} aria-hidden />
+          Slack app
+        </a>
         <button type="button" className="gallery-button" onClick={() => setGalleryOpen(true)}>
           <Images size={16} aria-hidden />
           Gallery
@@ -516,12 +520,6 @@ export default function App() {
                 </div>
               ) : (
                 <p className="hint">{specLine}</p>
-              )}
-              {platformId === 'slack' && (
-                <a className="slack-hint" href="/slack">
-                  Make emoji without leaving Slack with <code>/moji</code>
-                  <ArrowRight size={12} aria-hidden />
-                </a>
               )}
             </div>
 
