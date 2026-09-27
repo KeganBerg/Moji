@@ -68,7 +68,7 @@ Setup and tuning, in Supabase → Edge Functions → Secrets:
 
 ## Slack app
 
-`/moji a taco wearing sunglasses` in any Slack channel makes the emoji with the same pipeline, cache and daily limits as the website (each Slack user counts as one visitor). A leading style word changes the look: `/moji pixel a happy ghost`. The reply is visible only to the person who asked and has the 128 × 128 PNG, a Download button, a button to the workspace's Add Emoji page, and an Edit in Moji Locker link that reopens the same prompt on the site (a free cache hit).
+`/moji a taco wearing sunglasses` in any Slack channel makes the emoji with the same pipeline, cache and daily limits as the website (each Slack user counts as one visitor). A leading style word changes the look: `/moji pixel a happy ghost`. The reply is visible only to the person who asked and has the 128 × 128 PNG, a Download button, instructions to add it from the emoji picker's Add Emoji, and an Edit in Moji Locker link that reopens the same prompt on the site (a free cache hit).
 
 Slack doesn't let apps add custom emoji to a workspace (`admin.emoji.add` is Enterprise Grid only), so people upload the downloaded file themselves.
 

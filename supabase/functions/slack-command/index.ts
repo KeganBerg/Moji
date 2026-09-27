@@ -6,7 +6,7 @@
 // Slack wants an answer within 3 seconds, so the command is acknowledged at
 // once and the emoji is made in the background, then posted back through the
 // command's response_url as a message only the requester sees: the 128 px
-// emoji, a Download button, and a button to the workspace's Add Emoji page.
+// emoji, a Download button, and how to add it from the emoji picker.
 // Apps can't add custom emoji themselves outside Enterprise Grid
 // (admin.emoji.add), so the final upload is the person's.
 //
@@ -29,7 +29,6 @@ const LINK_DAYS = 7
 type Blocks = Record<string, unknown>[]
 interface Command {
   team_id: string
-  team_domain: string
   user_id: string
   text: string
   response_url: string
@@ -129,7 +128,6 @@ async function make(cmd: Command, style: string, subject: string) {
     if (!view.data || !download.data) throw new Error(view.error?.message ?? download.error?.message)
 
     const editUrl = `${SITE}/?${new URLSearchParams({ prompt: subject, style })}`
-    const addUrl = `https://${cmd.team_domain}.slack.com/customize/emoji`
     await respond(
       cmd.response_url,
       ephemeral(`Your emoji for "${esc(subject)}" is ready.`, [
@@ -137,7 +135,12 @@ async function make(cmd: Command, style: string, subject: string) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${esc(subject)}*\nDownload it, then choose *Add to Slack* and upload it as \`:${name}:\`.`,
+            text: [
+              `*${esc(subject)}* is ready. To add it to Slack:`,
+              '1. Click *Download* below.',
+              '2. Open the emoji picker (the smiley in the message box) and choose *Add Emoji*.',
+              `3. Upload the file, name it \`${name}\` and click *Save*.`,
+            ].join('\n'),
           },
           accessory: { type: 'image', image_url: view.data.signedUrl, alt_text: subject },
         },
@@ -150,7 +153,6 @@ async function make(cmd: Command, style: string, subject: string) {
               url: download.data.signedUrl,
               style: 'primary',
             },
-            { type: 'button', text: { type: 'plain_text', text: 'Add to Slack' }, url: addUrl },
             { type: 'button', text: { type: 'plain_text', text: 'Edit in Moji Locker' }, url: editUrl },
           ],
         },
@@ -180,7 +182,6 @@ Deno.serve(async (req) => {
   if (form.get('ssl_check')) return new Response('ok')
   const cmd: Command = {
     team_id: form.get('team_id') ?? '',
-    team_domain: form.get('team_domain') ?? '',
     user_id: form.get('user_id') ?? '',
     text: form.get('text') ?? '',
     response_url: form.get('response_url') ?? '',

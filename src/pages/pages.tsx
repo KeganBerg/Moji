@@ -195,8 +195,8 @@ const BASE_PAGES: Record<string, Page> = {
             channel.
           </li>
           <li>
-            Choose <strong>Download</strong>, then <strong>Add to Slack</strong> to open your workspace's Add Emoji
-            page, upload the file and give it a name.
+            Choose <strong>Download</strong>, then open Slack's emoji picker, choose <strong>Add Emoji</strong>, upload
+            the file and give it a name.
           </li>
         </ol>
         <p>
