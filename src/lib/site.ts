@@ -16,10 +16,9 @@ export function loadAnalytics() {
   document.head.appendChild(script)
 }
 
-// The Slack app's public Client ID (Basic Information on api.slack.com). Empty
-// until the app has public distribution turned on; /slack then shows the
-// Add to Slack button.
-export const SLACK_CLIENT_ID = ''
+// The Slack app's public Client ID (Basic Information on api.slack.com). Not a
+// secret: it appears in every install link. Empty hides the Add to Slack button.
+export const SLACK_CLIENT_ID = '12157955018117.12166731138340'
 
 export const SLACK_INSTALL_URL = `https://slack.com/oauth/v2/authorize?${new URLSearchParams({
   client_id: SLACK_CLIENT_ID,
