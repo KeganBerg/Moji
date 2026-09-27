@@ -85,7 +85,6 @@ async function callModel(model: string, prompt: string): Promise<Response> {
       quality: QUALITY,
       background: 'transparent',
       output_format: 'png',
-      moderation: 'auto',
     }),
   })
 }
