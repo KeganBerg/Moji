@@ -160,7 +160,7 @@ const GRADIENTS = [
 const ANIMALS = ['🦊', '🐸', '🐼', '🐙', '🦉', '🐧', '🦖', '🐝', '🦄', '🐢', '🐱', '🐶', '🦝', '🐨', '🦦', '🐳']
 const PASTELS = ['#fde68a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#ddd6fe', '#fed7aa', '#a5f3fc', '#e5e7eb']
 
-/** What the avatar shows: initials on a gradient, one letter, an animal, or a pattern with no text. */
+/** What the avatar shows: initials on a gradient, one letter, or an animal. */
 export interface Avatar {
   text: string
   background: string
@@ -207,13 +207,7 @@ function avatarFor(r: () => number, name: string): Avatar {
   if (style < 0.4)
     return { text: initialsOf(name), background: `linear-gradient(${angle}deg, ${a}, ${b})`, emoji: false }
   if (style < 0.6) return { text: initialsOf(name).slice(0, 1), background: a, emoji: false }
-  if (style < 0.85) return { text: pick(r, ANIMALS), background: pick(r, PASTELS), emoji: true }
-  const stripe = 4 + Math.floor(r() * 4)
-  return {
-    text: '',
-    background: `repeating-linear-gradient(${angle}deg, ${a} 0 ${stripe}px, ${b} ${stripe}px ${stripe * 2}px)`,
-    emoji: false,
-  }
+  return { text: pick(r, ANIMALS), background: pick(r, PASTELS), emoji: true }
 }
 
 export function personasFor(seed: number): { light: Persona; dark: Persona } {
