@@ -5,6 +5,6 @@ import { PAGES } from './pages/pages'
 export const pages = Object.keys(PAGES)
 
 export function render(key: string) {
-  const { title, description } = PAGES[key]
-  return { title, description, html: renderToStaticMarkup(<InfoPage page={key} />) }
+  const { description } = PAGES[key]
+  return { description, html: renderToStaticMarkup(<InfoPage page={key} />) }
 }

@@ -12,13 +12,11 @@ const template = await readFile(join(dist, 'index.html'), 'utf8')
 
 const escape = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
-function fill(html, { title, description, url, body }) {
+function fill(html, { description, url, body }) {
   const out = html
-    .replace(/<title>.*?<\/title>/, `<title>${escape(title)}</title>`)
     .replace(/(<meta name="description" content=")[^"]*/, `$1${escape(description)}`)
     .replace(/(<link rel="canonical" href=")[^"]*/, `$1${url}`)
     .replace(/(<meta property="og:url" content=")[^"]*/, `$1${url}`)
-    .replace(/(<meta property="og:title" content=")[^"]*/, `$1${escape(title)}`)
     .replace(/(<meta property="og:description" content=")[^"]*/, `$1${escape(description)}`)
     .replace('<div id="root"></div>', `<div id="root">${body}</div>`)
   if (!out.includes(body)) throw new Error(`Template is missing the root element for ${url}`)
@@ -26,10 +24,10 @@ function fill(html, { title, description, url, body }) {
 }
 
 for (const key of pages) {
-  const { title, description, html } = render(key)
+  const { description, html } = render(key)
   const url = `${SITE}/${key}`
   await mkdir(join(dist, key), { recursive: true })
-  await writeFile(join(dist, key, 'index.html'), fill(template, { title, description, url, body: html }))
+  await writeFile(join(dist, key, 'index.html'), fill(template, { description, url, body: html }))
 }
 
 const urls = ['', ...pages].map((p) => `  <url><loc>${SITE}/${p}</loc></url>`).join('\n')

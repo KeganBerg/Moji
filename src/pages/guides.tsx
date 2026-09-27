@@ -4,7 +4,6 @@ import type { Page } from './pages'
 
 interface Guide {
   slug: string
-  title: string
   description: string
   heading: string
   lede: ReactNode
@@ -14,7 +13,6 @@ interface Guide {
 export const GUIDES: Guide[] = [
   {
     slug: 'slack-emoji-size',
-    title: 'Slack emoji size and limits · Moji Locker',
     description:
       'The exact size, file limit, formats and frame count Slack accepts for custom emoji, and how to add one to your workspace.',
     heading: 'Slack emoji size and limits',
@@ -87,7 +85,6 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: 'add-custom-emoji-to-discord',
-    title: 'How to add custom emoji to Discord · Moji Locker',
     description:
       'Step-by-step: upload custom and animated emoji to a Discord server, plus the size limit, name rules and permissions you need.',
     heading: 'How to add custom emoji to Discord',
@@ -154,7 +151,6 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: 'animated-slack-emoji',
-    title: "Animated emoji that fit Slack's 128 KB · Moji Locker",
     description:
       "How to make an animated GIF emoji small enough for Slack's 128 KB limit without making it look choppy or blotchy.",
     heading: "Animated emoji that fit Slack's 128 KB",
@@ -203,10 +199,85 @@ export const GUIDES: Guide[] = [
       </>
     ),
   },
+  {
+    slug: 'halloween-emoji',
+    description:
+      'Halloween emoji ideas for Slack and Discord, with prompts you can paste, the animations that suit each one, and how to keep them small enough to upload.',
+    heading: 'Halloween emoji for Slack and Discord',
+    lede: (
+      <>
+        A spooky set of custom emoji for your team or server, with prompts ready to paste and the motion that suits each
+        one.
+      </>
+    ),
+    body: (
+      <>
+        <h2>Ideas and prompts</h2>
+        <p>
+          Type any of these into Moji Locker's describe box, or upload your own picture. Short prompts with one clear
+          subject turn out best at emoji size.
+        </p>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Friendly ghost</th>
+              <td>"cute white ghost with a big smile, thick outline" with Float</td>
+            </tr>
+            <tr>
+              <th>Jack-o'-lantern</th>
+              <td>"glowing carved pumpkin with a toothy grin" with Heartbeat</td>
+            </tr>
+            <tr>
+              <th>Black cat</th>
+              <td>"black cat arching its back, yellow eyes" with Shake</td>
+            </tr>
+            <tr>
+              <th>Skull</th>
+              <td>"cartoon skull laughing" with Jiggle</td>
+            </tr>
+            <tr>
+              <th>Bat</th>
+              <td>"small purple bat with open wings" with Bounce</td>
+            </tr>
+            <tr>
+              <th>Candy</th>
+              <td>"wrapped orange candy" with Spin</td>
+            </tr>
+            <tr>
+              <th>Witch hat</th>
+              <td>"pointy witch hat with a buckle" with Swing</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2>Make your own mascot spooky</h2>
+        <p>
+          The emoji people use most are the ones about your group. Upload your team's logo, the server mascot or a pet
+          photo, then describe a costume version too, like "our green frog mascot dressed as a vampire". Stack Party on
+          top of any motion for a color-cycling version that works as a celebration reaction.
+        </p>
+        <h2>For the cursed ones</h2>
+        <p>
+          Turn the Chaos slider up to deep-fry an emoji. Around 30 gives a warped, slightly wrong look that suits
+          zombies and haunted versions of your mascot. At 100 it's a full meme reaction.
+        </p>
+        <h2>Keep them uploadable</h2>
+        <p>
+          Dark Halloween art with glows and gradients makes heavier GIFs than flat colors. Moji Locker's export trims
+          colors and frames until the file fits Slack's 128 KB or Discord's 256 KB, but a transparent background and a
+          single motion keep more detail. The <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains
+          the tradeoffs.
+        </p>
+        <p>
+          Name the set so it's easy to find in the picker, like <code>:spooky_ghost:</code>,{' '}
+          <code>:spooky_pumpkin:</code> and <code>:spooky_cat:</code>. Typing <code>:spooky</code> then shows them all.
+        </p>
+        <Cta>Make a Halloween emoji →</Cta>
+      </>
+    ),
+  },
 ]
 
 const GUIDES_INDEX: Page = {
-  title: 'Custom emoji guides · Moji Locker',
   description: 'Guides to custom emoji sizes, file limits and uploading for Slack and Discord.',
   heading: 'Guides',
   lede: <>Short, practical answers to the questions people ask most about custom emoji.</>,
