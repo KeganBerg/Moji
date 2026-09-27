@@ -127,6 +127,12 @@ const BASE_PAGES: Record<string, Page> = {
           Uploaded images are resized, animated and exported entirely in your browser. They are never sent to our
           servers.
         </p>
+        <h2>Your gallery</h2>
+        <p>
+          Emoji you choose to save to the Gallery are stored in your browser's own storage on this device. They are
+          never uploaded, and clearing your browser data deletes them. Nothing is saved unless you press Save or turn on
+          saving every download.
+        </p>
         <h2>AI generation</h2>
         <p>
           When you generate an emoji, your description and chosen style are sent to our server and on to OpenAI, which

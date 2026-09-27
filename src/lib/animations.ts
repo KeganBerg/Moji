@@ -94,6 +94,53 @@ export const ANIMATIONS: Animation[] = [
     inset: 0.86,
     at: (t) => ({ y: Math.sin(t * TAU) * 0.06, rotate: Math.sin(t * TAU + 1) * 0.05 }),
   },
+  {
+    id: 'jiggle',
+    label: 'Jiggle',
+    duration: 700,
+    frames: 16,
+    inset: 0.78,
+    // A wiggle that swells at each end of the swing.
+    at: (t) => {
+      const swing = Math.sin(t * TAU)
+      const s = 1.02 + Math.abs(swing) * 0.12
+      return { rotate: swing * 0.28, scaleX: s, scaleY: s }
+    },
+  },
+  {
+    id: 'heartbeat',
+    label: 'Heartbeat',
+    duration: 1000,
+    frames: 20,
+    inset: 0.84,
+    // Two quick beats, then a rest.
+    at: (t) => {
+      const beat = (c: number) => Math.exp(-(((t - c) / 0.06) ** 2))
+      const s = 1 + (beat(0.12) + beat(0.34) * 0.75) * 0.16
+      return { scaleX: s, scaleY: s }
+    },
+  },
+  {
+    id: 'flip',
+    label: 'Flip',
+    duration: 1200,
+    frames: 24,
+    inset: 1,
+    at: (t) => ({ scaleX: Math.cos(t * TAU) }),
+  },
+  {
+    id: 'swing',
+    label: 'Swing',
+    duration: 1200,
+    frames: 24,
+    inset: 0.8,
+    // Rotates around a pivot just above the emoji, like it's hanging from a nail.
+    at: (t) => {
+      const a = Math.sin(t * TAU) * 0.3
+      const pivot = 0.42
+      return { rotate: a, x: -Math.sin(a) * pivot, y: pivot - Math.cos(a) * pivot }
+    },
+  },
 ]
 
 export function getAnimation(id: string): Animation {

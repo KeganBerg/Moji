@@ -2,6 +2,9 @@ import {
   ArrowUp,
   Download,
   FlipHorizontal2,
+  Check,
+  Images,
+  BookmarkPlus,
   ImagePlus,
   LoaderCircle,
   RotateCcw,
@@ -12,10 +15,19 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
+import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
 import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
+import {
+  deleteFromGallery,
+  getAutoSave,
+  listGallery,
+  saveToGallery,
+  setAutoSave,
+  type GalleryItem,
+} from './lib/gallery'
 import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_STRENGTH } from './lib/cutout'
@@ -28,6 +40,8 @@ interface HistoryItem {
   /** Cut the subject out of its background, chosen per image. */
   cutout: boolean
   cutoutStrength: number
+  /** What the cutout was when the image arrived, for Reset. */
+  cutoutDefault: boolean
   thumb: string
   name: string
 }
@@ -70,6 +84,12 @@ export default function App() {
   const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [gallery, setGallery] = useState<GalleryItem[]>([])
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [autoSave, setAutoSaveState] = useState(getAutoSave)
+  // The export last saved, so the button can say "Saved" until something changes.
+  const [savedResult, setSavedResult] = useState<ExportResult | null>(null)
+
   const active = history.find((h) => h.id === activeId) ?? null
   const platform = useMemo(() => {
     const base = PLATFORMS[platformId]
@@ -89,6 +109,36 @@ export default function App() {
   const updateActive = (patch: Partial<HistoryItem>) =>
     setHistory((h) => h.map((item) => (item.id === activeId ? { ...item, ...patch } : item)))
   const source = useMemo(() => (prepared ? applyTune(prepared, tune) : null), [prepared, tune])
+  const adjustChanged =
+    fit !== DEFAULT_RENDER.fit ||
+    padding !== DEFAULT_RENDER.padding ||
+    background !== null ||
+    !trim ||
+    rotation !== 0 ||
+    flip ||
+    (!!active && (active.cutout !== active.cutoutDefault || active.cutoutStrength !== DEFAULT_STRENGTH))
+  const resetAdjust = () => {
+    setFit(DEFAULT_RENDER.fit)
+    setPadding(DEFAULT_RENDER.padding)
+    setBackground(null)
+    setTrim(true)
+    setRotation(0)
+    setFlip(false)
+    if (active) updateActive({ cutout: active.cutoutDefault, cutoutStrength: DEFAULT_STRENGTH })
+  }
+  // Back to the empty editor, as if the page had just loaded. The destination stays.
+  const startOver = () => {
+    abortRef.current?.abort()
+    history.forEach((h) => URL.revokeObjectURL(h.thumb))
+    setHistory([])
+    setActiveId(null)
+    setPrompt('')
+    setName('')
+    setMotionIds([])
+    setTune(DEFAULT_TUNE)
+    setError(null)
+    resetAdjust()
+  }
   // Quarter turns snap to the nearest 90° and wrap into -180..180.
   const turn = (dir: 1 | -1) =>
     setRotation((r) => {
@@ -104,12 +154,14 @@ export default function App() {
 
   const addImage = useCallback(async (blob: Blob, suggestedName: string, fromUpload: boolean) => {
     const image = await loadImage(blob)
+    // Uploads on a plain background (a moon on black, a logo on white) get cut out
+    // automatically. Generated images already come with a transparent background.
+    const cutout = fromUpload && looksCuttable(image)
     const item: HistoryItem = {
       id: nextId.current++,
       image,
-      // Uploads on a plain background (a moon on black, a logo on white) get cut out
-      // automatically. Generated images already come with a transparent background.
-      cutout: fromUpload && looksCuttable(image),
+      cutout,
+      cutoutDefault: cutout,
       cutoutStrength: DEFAULT_STRENGTH,
       thumb: URL.createObjectURL(blob),
       name: sanitizeName(suggestedName, 'discord'),
@@ -191,14 +243,43 @@ export default function App() {
     }
   }, [source, options, animation, platform, exportKey])
 
+  useEffect(() => {
+    listGallery()
+      .then(setGallery)
+      .catch(() => {})
+  }, [])
+
+  const saveCurrent = async () => {
+    if (!result || savedResult === result) return
+    try {
+      const item = await saveToGallery({
+        name: emojiName,
+        blob: result.blob,
+        extension: result.extension,
+        size: result.size,
+        bytes: result.bytes,
+        platform: platform.label,
+      })
+      setGallery((g) => [item, ...g])
+      setSavedResult(result)
+    } catch {
+      setError("Couldn't save to the gallery. Your browser may be blocking storage.")
+    }
+  }
+
   const download = () => {
     if (!result) return
-    const url = URL.createObjectURL(result.blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    downloadBlob(result.blob, fileName)
+    if (autoSave) void saveCurrent()
+  }
+
+  const deleteSaved = async (item: GalleryItem) => {
+    try {
+      await deleteFromGallery(item.id)
+      setGallery((g) => g.filter((i) => i.id !== item.id))
+    } catch {
+      setError("Couldn't delete that emoji.")
+    }
   }
 
   const specLine = [
@@ -211,7 +292,13 @@ export default function App() {
 
   return (
     <div className="shell">
-      <SiteHeader />
+      <SiteHeader>
+        <button type="button" className="gallery-button" onClick={() => setGalleryOpen(true)}>
+          <Images size={16} aria-hidden />
+          Gallery
+          {gallery.length > 0 && <span className="count">{gallery.length}</span>}
+        </button>
+      </SiteHeader>
 
       <main className="workspace">
         <section
@@ -257,19 +344,25 @@ export default function App() {
 
           <div className="composer-wrap">
             {history.length > 0 && (
-              <div className="history" aria-label="Recent images">
-                {history.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    className={`history-item checker${h.id === activeId ? ' is-active' : ''}`}
-                    onClick={() => setActiveId(h.id)}
-                    aria-label={`Use ${h.name}`}
-                    aria-pressed={h.id === activeId}
-                  >
-                    <img src={h.thumb} alt="" />
-                  </button>
-                ))}
+              <div className="history-row">
+                <div className="history" aria-label="Recent images">
+                  {history.map((h) => (
+                    <button
+                      key={h.id}
+                      type="button"
+                      className={`history-item checker${h.id === activeId ? ' is-active' : ''}`}
+                      onClick={() => setActiveId(h.id)}
+                      aria-label={`Use ${h.name}`}
+                      aria-pressed={h.id === activeId}
+                    >
+                      <img src={h.thumb} alt="" />
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="text-button start-over" onClick={startOver}>
+                  <RotateCcw size={13} aria-hidden />
+                  Start over
+                </button>
               </div>
             )}
 
@@ -412,7 +505,14 @@ export default function App() {
             </div>
 
             <div className="group">
-              <h2>Adjust</h2>
+              <div className="group-head">
+                <h2>Adjust</h2>
+                {adjustChanged && (
+                  <button type="button" className="text-button" onClick={resetAdjust}>
+                    Reset
+                  </button>
+                )}
+              </div>
               <div className="setting">
                 <span>Background</span>
                 <Segmented
@@ -560,13 +660,17 @@ export default function App() {
                 <span>Name</span>
                 <div className="input-affix">
                   <span>:</span>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={() => name && setName(sanitizeName(name, platformId))}
-                    placeholder={emojiName}
-                    spellCheck={false}
-                  />
+                  {/* Sized to its text, so the closing colon sits right after the name. */}
+                  <span className="affix-grow" data-value={name || emojiName}>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={() => name && setName(sanitizeName(name, platformId))}
+                      placeholder={emojiName}
+                      spellCheck={false}
+                      size={1}
+                    />
+                  </span>
                   <span>:</span>
                 </div>
               </label>
@@ -594,6 +698,35 @@ export default function App() {
                 <Download size={16} />
                 Download {fileName}
               </button>
+              <div className="save-row">
+                <button
+                  type="button"
+                  className="text-button save-button"
+                  onClick={saveCurrent}
+                  disabled={!result || exporting || savedResult === result}
+                >
+                  {savedResult === result && result ? (
+                    <>
+                      <Check size={14} aria-hidden /> Saved to gallery
+                    </>
+                  ) : (
+                    <>
+                      <BookmarkPlus size={14} aria-hidden /> Save to gallery
+                    </>
+                  )}
+                </button>
+                <label className="auto-save">
+                  <input
+                    type="checkbox"
+                    checked={autoSave}
+                    onChange={(e) => {
+                      setAutoSaveState(e.target.checked)
+                      setAutoSave(e.target.checked)
+                    }}
+                  />
+                  Save every download
+                </label>
+              </div>
             </div>
           </section>
         </div>
@@ -608,7 +741,28 @@ export default function App() {
         </div>
       )}
 
+      <Gallery
+        open={galleryOpen}
+        items={gallery}
+        onClose={() => setGalleryOpen(false)}
+        onDownload={(item) => downloadBlob(item.blob, `${item.name}.${item.extension}`)}
+        onEdit={(item) => {
+          setGalleryOpen(false)
+          addImage(item.blob, item.name, false).catch((e) => setError((e as Error).message))
+        }}
+        onDelete={deleteSaved}
+      />
+
       <SiteFooter />
     </div>
   )
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

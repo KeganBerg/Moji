@@ -5,7 +5,7 @@ export function InfoPage({ page: key }: { page: string }) {
   const page = PAGES[key]
   return (
     <div className="shell">
-      <SiteHeader tagline={false} />
+      <SiteHeader />
       <main className="info">
         <a className="info-back" href="/">
           ← Back to the editor
