@@ -100,7 +100,7 @@ const de: Messages = {
   errNotSetUp: 'Die KI-Generierung ist noch nicht eingerichtet.',
   errDescribe: 'Beschreib das Emoji, das du möchtest.',
   errTooLong: 'Die Beschreibung darf höchstens {n} Zeichen lang sein.',
-  errBlocked: 'Diese Beschreibung kann nicht generiert werden. Formuliere sie anders.',
+  errBlocked: 'Aus dieser Beschreibung kann kein Emoji generiert werden. Formuliere sie anders.',
   errLimit: 'Du hast dein KI-Limit für heute erreicht. Bilder hochladen geht weiterhin.',
   errLimitN: 'Du hast deine {n} KI-Generierungen für heute aufgebraucht. Bilder hochladen geht weiterhin.',
   errBusy: 'Die KI-Generierung ist für heute ausgelastet. Versuch es morgen wieder.',
