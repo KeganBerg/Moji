@@ -106,7 +106,7 @@ export const en = {
   errNotSetUp: 'AI generation is not set up yet.',
   errDescribe: 'Describe the emoji you want.',
   errTooLong: 'Keep the description to {n} characters or fewer.',
-  errBlocked: "That description can't be generated. Try wording it differently.",
+  errBlocked: "Can't make an emoji from that description. Try wording it differently.",
   errLimit: "You've reached today's AI limit. Uploads still work.",
   errLimitN: "You've used today's {n} AI generations. Uploads still work.",
   errBusy: 'AI generation is busy for today. Try again tomorrow.',

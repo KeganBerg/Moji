@@ -100,7 +100,7 @@ const it: Messages = {
   errNotSetUp: 'La generazione IA non è ancora configurata.',
   errDescribe: 'Descrivi l’emoji che vuoi.',
   errTooLong: 'La descrizione può avere al massimo {n} caratteri.',
-  errBlocked: 'Non è possibile generare questa descrizione. Prova a formularla diversamente.',
+  errBlocked: 'Non è possibile generare un’emoji da questa descrizione. Prova a formularla diversamente.',
   errLimit: 'Hai raggiunto il limite IA di oggi. Puoi comunque caricare immagini.',
   errLimitN: 'Hai usato le tue {n} generazioni IA di oggi. Puoi comunque caricare immagini.',
   errBusy: 'La generazione IA è sovraccarica per oggi. Riprova domani.',
