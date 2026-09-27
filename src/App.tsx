@@ -2,17 +2,17 @@ import {
   ArrowUp,
   Download,
   FlipHorizontal2,
-  Check,
   Images,
-  BookmarkPlus,
   ImagePlus,
   LoaderCircle,
   RotateCcw,
   RotateCw,
+  Save,
+  SaveCheck,
   Sparkles,
   Upload,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
 import { Gallery } from './components/Gallery'
@@ -56,6 +56,9 @@ const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
 export default function App() {
   const generator = useMemo(() => getGenerator(), [])
   const fileInput = useRef<HTMLInputElement>(null)
+  const canvasBox = useRef<HTMLDivElement>(null)
+  const previewSize = usePreviewSize(canvasBox)
+  const previewInView = useInView(canvasBox)
   const abortRef = useRef<AbortController | null>(null)
   const nextId = useRef(1)
 
@@ -318,9 +321,9 @@ export default function App() {
             if (file) onFile(file)
           }}
         >
-          <div className={`canvas checker${generating ? ' is-busy' : ''}`}>
+          <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
             {source ? (
-              <EmojiCanvas source={source} animation={animation} options={options} size={208} />
+              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
                 <span className="empty-icon">
@@ -402,6 +405,18 @@ export default function App() {
                   </option>
                 ))}
               </select>
+              {active && (
+                <button
+                  type="button"
+                  className={`icon-button save-button${savedResult === result && result ? ' is-saved' : ''}`}
+                  onClick={saveCurrent}
+                  disabled={!result || exporting || savedResult === result}
+                  aria-label={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                  title={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                >
+                  {savedResult === result && result ? <SaveCheck size={18} /> : <Save size={18} />}
+                </button>
+              )}
               <button
                 type="submit"
                 className="send"
@@ -656,6 +671,11 @@ export default function App() {
             </div>
 
             <div className="group export">
+              {source && (
+                <div className="export-thumb checker" aria-hidden>
+                  <EmojiCanvas source={source} animation={animation} options={options} size={44} />
+                </div>
+              )}
               <label className="field">
                 <span>Name</span>
                 <div className="input-affix">
@@ -699,22 +719,6 @@ export default function App() {
                 Download {fileName}
               </button>
               <div className="save-row">
-                <button
-                  type="button"
-                  className="text-button save-button"
-                  onClick={saveCurrent}
-                  disabled={!result || exporting || savedResult === result}
-                >
-                  {savedResult === result && result ? (
-                    <>
-                      <Check size={14} aria-hidden /> Saved to gallery
-                    </>
-                  ) : (
-                    <>
-                      <BookmarkPlus size={14} aria-hidden /> Save to gallery
-                    </>
-                  )}
-                </button>
                 <label className="auto-save">
                   <input
                     type="checkbox"
@@ -738,6 +742,12 @@ export default function App() {
           <button type="button" onClick={() => setError(null)} aria-label="Dismiss">
             ×
           </button>
+        </div>
+      )}
+
+      {source && !previewInView && (
+        <div className="mini-preview checker" aria-hidden>
+          <EmojiCanvas source={source} animation={animation} options={options} size={64} />
         </div>
       )}
 
@@ -765,4 +775,37 @@ function downloadBlob(blob: Blob, fileName: string) {
   a.download = fileName
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/** The big preview grows with the space it has: about 60% of the box, between 160 and 384 px. */
+function usePreviewSize(ref: RefObject<HTMLDivElement | null>) {
+  const [size, setSize] = useState(208)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      const next = Math.min(384, Math.max(160, Math.min(width, height) * 0.6))
+      // Snap to 16 px steps so small resizes don't re-render every frame.
+      setSize(Math.round(next / 16) * 16)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return size
+}
+
+/** Whether most of an element is on screen, including inside scrolling panels. */
+function useInView(ref: RefObject<HTMLElement | null>) {
+  const [inView, setInView] = useState(true)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.intersectionRatio > 0.35), {
+      threshold: [0, 0.35, 1],
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return inView
 }

@@ -13,6 +13,8 @@
   --primary-text: #fafafa;
   --ok: #16a34a;
   --over: #dc2626;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
   --checker: #f1f1f3;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px -8px rgb(0 0 0 / 0.08);
   --radius: 14px;
@@ -52,6 +54,8 @@
     --primary-text: #09090b;
     --ok: #4ade80;
     --over: #f87171;
+    --warn: #fbbf24;
+    --warn-soft: rgb(251 191 36 / 0.12);
     --checker: #1a1a1e;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
     color-scheme: dark;
@@ -167,6 +171,7 @@ h2 {
 /* Stage */
 
 .stage {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -268,6 +273,13 @@ h2 {
   gap: 12px;
 }
 
+/* Side by side only when there's room for both chats to breathe. */
+@container (max-width: 620px) {
+  .chat-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chat {
   display: flex;
   gap: 10px;
@@ -280,6 +292,29 @@ h2 {
   background: #ffffff;
   color: #1d1c1d;
   border: 1px solid #e8e8e8;
+  padding: 12px 16px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.chat-light .chat-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+}
+
+.chat-light .chat-meta {
+  font-size: 15px;
+}
+
+.chat-light .chat-meta strong {
+  font-weight: 800;
+}
+
+.chat-light .chat-meta span {
+  font-size: 12px;
+  color: #616061;
+  opacity: 1;
 }
 
 .chat-dark {
@@ -339,16 +374,18 @@ h2 {
 .chat-reaction {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   width: fit-content;
-  margin-top: 4px;
-  padding: 1px 7px;
-  border-radius: 999px;
+  height: 24px;
+  margin-top: 6px;
+  padding: 0 8px 0 6px;
+  border-radius: 12px;
   border: 1px solid #1d9bd1;
   background: #e8f5fa;
   color: #1264a3;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Composer */
@@ -903,7 +940,9 @@ input[role='switch']:checked::after {
 }
 
 .input-affix .affix-grow input {
-  width: 100%;
+  /* Contribute no width of its own, so the column is exactly the text's width. */
+  width: 0;
+  min-width: 100%;
 }
 
 .input-suffix span {
@@ -1219,13 +1258,146 @@ input[role='switch']:checked::after {
 
 /* Tablet and phone */
 
-@media (max-width: 900px) {
+/* Download and its status stay pinned to the bottom of the settings, so they
+   never scroll out of view while you adjust things. */
+.group.export {
+  position: sticky;
+  /* -1px covers the sub-pixel sliver that otherwise shows scrolled rows below it. */
+  bottom: -1px;
+  z-index: 1;
+  margin-top: auto;
+  padding-bottom: calc(17px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* A small copy of the emoji that appears once the big preview scrolls out of
+   view, so every tweak stays visible on phones and short screens. */
+.mini-preview {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.35);
+  animation: mini-in 0.18s var(--ease);
+}
+
+.export-thumb {
+  display: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+@keyframes mini-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+
+/* On desktops, laptops and tablets the editor fills the window: the preview
+   grows into the spare height and the settings scroll inside their panel. */
+@media (min-width: 768px) and (min-height: 540px) {
+  .shell {
+    max-width: 1600px;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 30vw, 380px);
+    align-items: stretch;
+    height: calc(100dvh - 64px - 24px);
+  }
+
+  .stage {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .canvas {
+    flex: 1;
+    min-height: 160px;
+  }
+
+  .sidebar {
+    position: static;
+    min-height: 0;
+  }
+
+  .inspector {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 767px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
     position: static;
+  }
+
+  /* On phones and small tablets, Download is a bar fixed to the bottom of the
+     screen, so it's in reach from anywhere on the page. */
+  .shell {
+    padding-bottom: 180px;
+  }
+
+  .group.export {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 15;
+    gap: 8px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    box-shadow: 0 -8px 24px -12px rgb(0 0 0 / 0.3);
+  }
+
+  .group.export .field > span {
+    display: none;
+  }
+
+  .group.export {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: center;
+  }
+
+  .group.export > * {
+    grid-column: 2;
+  }
+
+  .group.export > .export-thumb {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: start;
+    display: grid;
+  }
+
+  .group.export > .save-row {
+    grid-column: 1 / -1;
+  }
+
+  /* The bar already shows the emoji, so the floating copy isn't needed. */
+  .mini-preview {
+    display: none;
+  }
+
+  .group.export .hint {
+    display: none;
   }
 }
 
@@ -1323,17 +1495,19 @@ input[role='switch']:checked::after {
   gap: 8px;
 }
 
-.save-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text);
+.save-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
-.save-button:disabled {
-  color: var(--text-3);
-  cursor: default;
+.save-button:disabled:hover {
+  background: none;
+  color: var(--text-2);
+}
+
+.save-button.is-saved:disabled {
+  opacity: 1;
+  color: var(--text);
 }
 
 .auto-save {
@@ -1393,6 +1567,25 @@ input[role='switch']:checked::after {
   margin: 0;
   color: var(--text-2);
   font-size: 13px;
+}
+
+.gallery-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.gallery-warning svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warn);
 }
 
 .gallery-empty {
