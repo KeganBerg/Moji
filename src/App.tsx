@@ -2,13 +2,13 @@ import {
   ArrowUp,
   Download,
   FlipHorizontal2,
-  Check,
   Images,
-  BookmarkPlus,
   ImagePlus,
   LoaderCircle,
   RotateCcw,
   RotateCw,
+  Save,
+  SaveCheck,
   Sparkles,
   Upload,
 } from 'lucide-react'
@@ -406,6 +406,16 @@ export default function App() {
                 ))}
               </select>
               <button
+                type="button"
+                className={`icon-button save-button${savedResult === result && result ? ' is-saved' : ''}`}
+                onClick={saveCurrent}
+                disabled={!result || exporting || savedResult === result}
+                aria-label={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                title={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+              >
+                {savedResult === result && result ? <SaveCheck size={18} /> : <Save size={18} />}
+              </button>
+              <button
                 type="submit"
                 className="send"
                 disabled={!prompt.trim() || generating}
@@ -707,22 +717,6 @@ export default function App() {
                 Download {fileName}
               </button>
               <div className="save-row">
-                <button
-                  type="button"
-                  className="text-button save-button"
-                  onClick={saveCurrent}
-                  disabled={!result || exporting || savedResult === result}
-                >
-                  {savedResult === result && result ? (
-                    <>
-                      <Check size={14} aria-hidden /> Saved to gallery
-                    </>
-                  ) : (
-                    <>
-                      <BookmarkPlus size={14} aria-hidden /> Save to gallery
-                    </>
-                  )}
-                </button>
                 <label className="auto-save">
                   <input
                     type="checkbox"

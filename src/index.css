@@ -1491,17 +1491,19 @@ input[role='switch']:checked::after {
   gap: 8px;
 }
 
-.save-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text);
+.save-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
-.save-button:disabled {
-  color: var(--text-3);
-  cursor: default;
+.save-button:disabled:hover {
+  background: none;
+  color: var(--text-2);
+}
+
+.save-button.is-saved:disabled {
+  opacity: 1;
+  color: var(--text);
 }
 
 .auto-save {
