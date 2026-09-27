@@ -24,6 +24,8 @@ export const PER_VISITOR = Number(Deno.env.get('DAILY_LIMIT_PER_VISITOR') ?? 15)
 const GLOBAL = Number(Deno.env.get('DAILY_LIMIT_GLOBAL') ?? 300)
 export const BUCKET = 'generation-cache'
 export const MAX_PROMPT = 200
+// Cached images served per visitor per day, as a multiple of PER_VISITOR.
+const CACHE_HIT_FACTOR = 10
 
 export const STYLES: Record<string, string> = {
   flat: 'flat vector emoji, clean solid shapes, subtle gradients, thin dark outline',
@@ -107,30 +109,47 @@ export async function generateEmoji(
   const path = `${cacheKey}.png`
   const since = `${day}T00:00:00Z`
 
-  // 1. Cache hit: free, and doesn't count against anyone's limit.
+  const count = (paid: boolean, mineOnly: boolean) => {
+    let q = admin
+      .from('generation_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('cache_hit', !paid)
+      .gte('created_at', since)
+    if (mineOnly) q = q.eq('visitor_hash', visitor)
+    return q.then(({ count }) => count ?? 0)
+  }
+
+  // 1. Cache hit: free, and doesn't count against the paid limit. Hits are
+  // still capped per visitor so a script can't replay cached prompts forever.
   const cached = await admin.storage.from(BUCKET).download(path)
   if (cached.data) {
+    if ((await count(false, true)) >= PER_VISITOR * CACHE_HIT_FACTOR) {
+      return { ok: false, status: 429, error: "You've reached today's limit. Uploads still work.", reason: 'visitor' }
+    }
     await admin
       .from('generation_log')
       .insert({ visitor_hash: visitor, cache_key: cacheKey, cache_hit: true, model: MODEL, quality: QUALITY })
     return { ok: true, png: new Uint8Array(await cached.data.arrayBuffer()), cacheKey, cached: true, remaining: null }
   }
 
-  // 2. Limits on paid generations.
-  const [{ count: mine }, { count: everyone }] = await Promise.all([
-    admin
-      .from('generation_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('visitor_hash', visitor)
-      .eq('cache_hit', false)
-      .gte('created_at', since),
-    admin
-      .from('generation_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('cache_hit', false)
-      .gte('created_at', since),
-  ])
-  if ((mine ?? 0) >= PER_VISITOR) {
+  // 2. Reserve a slot first, then count including it, so parallel requests
+  // can't all read the same count and slip past the limits. A slot over the
+  // limit, or one whose generation fails, is released again.
+  const { data: slot, error: slotError } = await admin
+    .from('generation_log')
+    .insert({ visitor_hash: visitor, cache_key: cacheKey, cache_hit: false, model: MODEL, quality: QUALITY })
+    .select('id')
+    .single()
+  if (slotError || !slot) {
+    console.error('could not reserve a generation slot', slotError)
+    return { ok: false, status: 502, error: 'Generation failed. Try again.' }
+  }
+  const release = () => admin.from('generation_log').delete().eq('id', slot.id)
+
+  // 3. Limits on paid generations.
+  const [mine, everyone] = await Promise.all([count(true, true), count(true, false)])
+  if (mine > PER_VISITOR) {
+    await release()
     return {
       ok: false,
       status: 429,
@@ -138,18 +157,10 @@ export async function generateEmoji(
       reason: 'visitor',
     }
   }
-  if ((everyone ?? 0) >= GLOBAL) {
+  if (everyone > GLOBAL) {
+    await release()
     return { ok: false, status: 429, error: 'AI generation is busy for today. Try again tomorrow.', reason: 'global' }
   }
-
-  // 3. Reserve the slot before calling the model so parallel requests can't
-  // slip past the limits; released again if generation fails.
-  const { data: slot } = await admin
-    .from('generation_log')
-    .insert({ visitor_hash: visitor, cache_key: cacheKey, cache_hit: false, model: MODEL, quality: QUALITY })
-    .select('id')
-    .single()
-  const release = () => slot && admin.from('generation_log').delete().eq('id', slot.id)
 
   // 4. Generate.
   const prompt = buildPrompt(subject, style)
@@ -160,7 +171,7 @@ export async function generateEmoji(
     console.warn('primary model rejected transparent background', detail)
     res = await callModel(FALLBACK_MODEL, prompt)
     detail = res.ok ? '' : await res.text()
-    if (slot) await admin.from('generation_log').update({ model: FALLBACK_MODEL }).eq('id', slot.id)
+    await admin.from('generation_log').update({ model: FALLBACK_MODEL }).eq('id', slot.id)
   }
   if (!res.ok) {
     await release()
@@ -188,5 +199,5 @@ export async function generateEmoji(
 
   await admin.storage.from(BUCKET).upload(path, png, { contentType: 'image/png', upsert: true })
 
-  return { ok: true, png, cacheKey, cached: false, remaining: Math.max(0, PER_VISITOR - (mine ?? 0) - 1) }
+  return { ok: true, png, cacheKey, cached: false, remaining: Math.max(0, PER_VISITOR - mine) }
 }

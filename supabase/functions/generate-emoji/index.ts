@@ -45,7 +45,14 @@ Deno.serve(async (req) => {
   const style = typeof body.style === 'string' ? body.style : 'flat'
 
   const day = new Date().toISOString().slice(0, 10)
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+  // Supabase's Cloudflare edge sets cf-connecting-ip itself. The first
+  // x-forwarded-for entry is whatever the client sent, so it can't be trusted
+  // for limits (a random value per request would get a fresh daily quota).
+  const ip =
+    req.headers.get('cf-connecting-ip')?.trim() ||
+    req.headers.get('x-real-ip')?.trim() ||
+    (req.headers.get('x-forwarded-for') ?? '').split(',').at(-1)?.trim() ||
+    'unknown'
   const visitor = await sha256(`${ip}|${day}`)
 
   const out = await generateEmoji(adminClient(), visitor, subject, style)
