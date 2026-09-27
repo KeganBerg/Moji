@@ -4,6 +4,7 @@ import {
   FlipHorizontal2,
   Hash,
   Ghost,
+  Globe,
   Images,
   ImagePlus,
   LoaderCircle,
@@ -36,6 +37,8 @@ import { DEFAULT_STRENGTH } from './lib/cutout'
 import { useSeason } from './lib/season'
 import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type RenderOptions } from './lib/render'
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
+import { I18nProvider } from './components/I18nProvider'
+import { LANGUAGES, setLanguage, useI18n, type LangCode, type MessageKey } from './lib/i18n'
 
 interface HistoryItem {
   id: number
@@ -51,10 +54,17 @@ interface HistoryItem {
 
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml'
 const HISTORY_LIMIT = 8
-const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
-  value: id,
-  label: PLATFORMS[id].label,
-}))
+
+// Message keys for labels defined by id in lib/.
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const motionKey = (id: string) => `motion${capitalize(id)}` as MessageKey
+const STYLE_KEYS: Record<StyleId, MessageKey> = {
+  flat: 'styleFlat',
+  '3d': 'style3d',
+  sticker: 'styleSticker',
+  pixel: 'stylePixel',
+  'hand-drawn': 'styleSketch',
+}
 
 function linkedPrompt(): { prompt: string; style: StyleId } | null {
   if (typeof window === 'undefined') return null
@@ -65,6 +75,15 @@ function linkedPrompt(): { prompt: string; style: StyleId } | null {
 }
 
 export default function App() {
+  return (
+    <I18nProvider>
+      <Editor />
+    </I18nProvider>
+  )
+}
+
+function Editor() {
+  const { t, lang, plural } = useI18n()
   const season = useSeason()
   const generator = useMemo(() => getGenerator(), [])
   const fileInput = useRef<HTMLInputElement>(null)
@@ -296,7 +315,7 @@ export default function App() {
       setGallery((g) => [item, ...g])
       setSavedResult(result)
     } catch {
-      setError("Couldn't save to the gallery. Your browser may be blocking storage.")
+      setError(t('saveFailed'))
     }
   }
 
@@ -311,28 +330,48 @@ export default function App() {
       await deleteFromGallery(item.id)
       setGallery((g) => g.filter((i) => i.id !== item.id))
     } catch {
-      setError("Couldn't delete that emoji.")
+      setError(t('deleteFailed'))
     }
   }
 
   const specLine = [
     `${platform.size}×${platform.size}`,
-    `under ${formatBytes(platform.maxBytes)}`,
-    platform.maxFrames < 200 ? `GIF up to ${platform.maxFrames} frames` : null,
+    t('specUnder', { size: formatBytes(platform.maxBytes) }),
+    platform.maxFrames < 200 ? t('specFrames', { n: platform.maxFrames }) : null,
   ]
     .filter(Boolean)
     .join(' · ')
 
+  const platformOptions = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
+    value: id,
+    label: id === 'custom' ? t('custom') : PLATFORMS[id].label,
+  }))
+  const motionLabel = motionIds.map((id) => t(motionKey(id))).join(' + ')
+
   return (
     <div className="shell">
       <SiteHeader>
-        <a className="slack-link" href="/slack" title="Make emoji inside Slack with /moji">
+        <a className="slack-link" href="/slack" title={t('slackAppTitle')}>
           <Hash size={15} aria-hidden />
-          Slack app
+          {t('slackApp')}
         </a>
+        <label className="icon-button language-picker" title={t('language')}>
+          <Globe size={17} aria-hidden />
+          <select
+            value={lang}
+            onChange={(e) => void setLanguage(e.target.value as LangCode)}
+            aria-label={t('language')}
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code} lang={l.code}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" className="gallery-button" onClick={() => setGalleryOpen(true)}>
           <Images size={16} aria-hidden />
-          Gallery
+          {t('gallery')}
           {gallery.length > 0 && <span className="count">{gallery.length}</span>}
         </button>
       </SiteHeader>
@@ -340,7 +379,7 @@ export default function App() {
       <main className="workspace">
         <section
           className={`stage${dragging ? ' is-dragging' : ''}`}
-          aria-label="Emoji preview"
+          aria-label={t('emojiPreview')}
           onDragOver={(e) => {
             e.preventDefault()
             setDragging(true)
@@ -363,14 +402,14 @@ export default function App() {
                 <span className={`empty-icon${season.on ? ' is-ghost' : ''}`}>
                   {season.on ? <Ghost size={22} strokeWidth={1.75} /> : <ImagePlus size={22} strokeWidth={1.75} />}
                 </span>
-                <strong>Drop an image, or describe one below</strong>
-                <span>PNG, JPG, GIF or WebP. Pasting works too.</span>
+                <strong>{t('dropTitle')}</strong>
+                <span>{t('dropFormats')}</span>
               </button>
             )}
             {generating && (
               <div className="busy" role="status">
                 <LoaderCircle className="spin" size={18} />
-                Generating
+                {t('generating')}
               </div>
             )}
           </div>
@@ -382,14 +421,14 @@ export default function App() {
           <div className="composer-wrap">
             {history.length > 0 && (
               <div className="history-row">
-                <div className="history" aria-label="Recent images">
+                <div className="history" aria-label={t('recentImages')}>
                   {history.map((h) => (
                     <button
                       key={h.id}
                       type="button"
                       className={`history-item checker${h.id === activeId ? ' is-active' : ''}`}
                       onClick={() => setActiveId(h.id)}
-                      aria-label={`Use ${h.name}`}
+                      aria-label={t('useImage', { name: h.name })}
                       aria-pressed={h.id === activeId}
                     >
                       <img src={h.thumb} alt="" />
@@ -398,7 +437,7 @@ export default function App() {
                 </div>
                 <button type="button" className="text-button start-over" onClick={startOver}>
                   <RotateCcw size={13} aria-hidden />
-                  Start over
+                  {t('startOver')}
                 </button>
               </div>
             )}
@@ -414,8 +453,8 @@ export default function App() {
                 type="button"
                 className="icon-button"
                 onClick={() => fileInput.current?.click()}
-                aria-label="Upload an image"
-                title="Upload an image"
+                aria-label={t('uploadImage')}
+                title={t('uploadImage')}
               >
                 <Upload size={18} />
               </button>
@@ -424,18 +463,18 @@ export default function App() {
                 value={prompt}
                 maxLength={MAX_PROMPT}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe anything…"
-                aria-label="Describe an emoji"
+                placeholder={t('describePlaceholder')}
+                aria-label={t('describeLabel')}
               />
               <select
                 className="style-select"
                 value={style}
                 onChange={(e) => setStyle(e.target.value as StyleId)}
-                aria-label="Style"
+                aria-label={t('style')}
               >
                 {STYLES.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.label}
+                    {t(STYLE_KEYS[s.id])}
                   </option>
                 ))}
               </select>
@@ -445,8 +484,8 @@ export default function App() {
                   className={`icon-button save-button${savedResult === result && result ? ' is-saved' : ''}`}
                   onClick={saveCurrent}
                   disabled={!result || exporting || savedResult === result}
-                  aria-label={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
-                  title={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                  aria-label={savedResult === result && result ? t('savedToGallery') : t('saveToGallery')}
+                  title={savedResult === result && result ? t('savedToGallery') : t('saveToGallery')}
                 >
                   {savedResult === result && result ? <SaveCheck size={18} /> : <Save size={18} />}
                 </button>
@@ -455,8 +494,8 @@ export default function App() {
                 type="submit"
                 className="send"
                 disabled={!prompt.trim() || generating}
-                aria-label="Generate"
-                title="Generate"
+                aria-label={t('generate')}
+                title={t('generate')}
               >
                 {generating ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}
               </button>
@@ -465,9 +504,9 @@ export default function App() {
               <Sparkles size={13} />
               {generator.isReal
                 ? remaining !== null
-                  ? `${remaining} AI generations left today`
-                  : 'AI generation, with transparent backgrounds'
-                : 'Offline preview: AI generation is not connected in this build'}
+                  ? plural(remaining, 'generationsLeftOne', 'generationsLeft')
+                  : t('aiNote')
+                : t('offlineNote')}
             </p>
           </div>
 
@@ -485,14 +524,19 @@ export default function App() {
         </section>
 
         <div className="sidebar">
-          <section className="inspector" aria-label="Settings">
+          <section className="inspector" aria-label={t('settings')}>
             <div className="group">
-              <h2>Destination</h2>
-              <Segmented label="Destination" options={PLATFORM_OPTIONS} value={platformId} onChange={setPlatformId} />
+              <h2>{t('destination')}</h2>
+              <Segmented
+                label={t('destination')}
+                options={platformOptions}
+                value={platformId}
+                onChange={setPlatformId}
+              />
               {platformId === 'custom' ? (
                 <div className="field-row">
                   <label className="field">
-                    <span>Size</span>
+                    <span>{t('size')}</span>
                     <div className="input-suffix">
                       <input
                         type="number"
@@ -505,7 +549,7 @@ export default function App() {
                     </div>
                   </label>
                   <label className="field">
-                    <span>Max file</span>
+                    <span>{t('maxFile')}</span>
                     <div className="input-suffix">
                       <input
                         type="number"
@@ -525,10 +569,10 @@ export default function App() {
 
             <div className="group">
               <div className="group-head">
-                <h2>Motion</h2>
-                <span className="hint">{motionIds.length > 1 ? animation.label : 'Pick one or combine a few'}</span>
+                <h2>{t('motion')}</h2>
+                <span className="hint">{motionIds.length > 1 ? motionLabel : t('motionHint')}</span>
               </div>
-              <div className="motions" role="group" aria-label="Motion">
+              <div className="motions" role="group" aria-label={t('motion')}>
                 {ANIMATIONS.map((a) => {
                   const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
                   return (
@@ -546,7 +590,7 @@ export default function App() {
                           <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
                         )}
                       </span>
-                      <span>{a.label}</span>
+                      <span>{t(motionKey(a.id))}</span>
                     </button>
                   )
                 })}
@@ -555,7 +599,7 @@ export default function App() {
 
             <div className="group">
               <div className="group-head">
-                <h2>Adjust</h2>
+                <h2>{t('adjust')}</h2>
                 {adjustChanged && (
                   <button type="button" className="text-button" onClick={resetAdjust}>
                     Reset
@@ -563,13 +607,13 @@ export default function App() {
                 )}
               </div>
               <div className="setting">
-                <span>Background</span>
+                <span>{t('background')}</span>
                 <Segmented
-                  label="Background"
+                  label={t('background')}
                   size="sm"
                   options={[
-                    { value: 'keep', label: 'Keep' },
-                    { value: 'remove', label: 'Remove' },
+                    { value: 'keep', label: t('keep') },
+                    { value: 'remove', label: t('remove') },
                   ]}
                   value={active?.cutout ? 'remove' : 'keep'}
                   onChange={(v) => updateActive({ cutout: v === 'remove' })}
@@ -577,7 +621,7 @@ export default function App() {
               </div>
               {active?.cutout && (
                 <label className="setting">
-                  <span>Strength</span>
+                  <span>{t('strength')}</span>
                   <input
                     type="range"
                     min={0}
@@ -591,20 +635,20 @@ export default function App() {
                 </label>
               )}
               <div className="setting">
-                <span>Framing</span>
+                <span>{t('framing')}</span>
                 <Segmented
-                  label="Framing"
+                  label={t('framing')}
                   size="sm"
                   options={[
-                    { value: 'contain', label: 'Fit' },
-                    { value: 'cover', label: 'Fill' },
+                    { value: 'contain', label: t('fit') },
+                    { value: 'cover', label: t('fill') },
                   ]}
                   value={fit}
                   onChange={setFit}
                 />
               </div>
               <label className="setting">
-                <span>Padding</span>
+                <span>{t('padding')}</span>
                 <input
                   type="range"
                   min={0}
@@ -616,7 +660,7 @@ export default function App() {
                 <output>{Math.round(padding * 100)}%</output>
               </label>
               <label className="setting">
-                <span>Rotate</span>
+                <span>{t('rotate')}</span>
                 <input
                   type="range"
                   min={-180}
@@ -629,12 +673,12 @@ export default function App() {
                 <output>{rotation}°</output>
               </label>
               <div className="setting">
-                <span>Turn</span>
+                <span>{t('turn')}</span>
                 <div className="icon-options">
-                  <button type="button" className="icon-option" onClick={() => turn(-1)} title="Rotate left 90°">
+                  <button type="button" className="icon-option" onClick={() => turn(-1)} title={t('rotateLeft')}>
                     <RotateCcw size={15} />
                   </button>
-                  <button type="button" className="icon-option" onClick={() => turn(1)} title="Rotate right 90°">
+                  <button type="button" className="icon-option" onClick={() => turn(1)} title={t('rotateRight')}>
                     <RotateCw size={15} />
                   </button>
                   <button
@@ -642,54 +686,54 @@ export default function App() {
                     className={`icon-option${flip ? ' is-active' : ''}`}
                     onClick={() => setFlip((f) => !f)}
                     aria-pressed={flip}
-                    title="Flip horizontally"
+                    title={t('flipHorizontal')}
                   >
                     <FlipHorizontal2 size={15} />
                   </button>
                 </div>
               </div>
               <div className="setting">
-                <span>Fill color</span>
+                <span>{t('fillColor')}</span>
                 <div className="bg-options">
                   <button
                     type="button"
                     className={`swatch swatch-none checker${background === null ? ' is-active' : ''}`}
                     onClick={() => setBackground(null)}
-                    aria-label="Transparent background"
+                    aria-label={t('transparentBackground')}
                     aria-pressed={background === null}
                   />
                   <label
                     className={`swatch${background !== null ? ' is-active' : ''}`}
                     style={{ background: background ?? '#ffffff' }}
-                    title="Solid color"
+                    title={t('solidColor')}
                   >
                     <input
                       type="color"
                       value={background ?? '#ffffff'}
                       onChange={(e) => setBackground(e.target.value)}
-                      aria-label="Background color"
+                      aria-label={t('backgroundColor')}
                     />
                   </label>
                 </div>
               </div>
               <label className="setting toggle">
-                <span>Trim empty edges</span>
+                <span>{t('trimEdges')}</span>
                 <input type="checkbox" role="switch" checked={trim} onChange={(e) => setTrim(e.target.checked)} />
               </label>
             </div>
 
             <div className="group">
               <div className="group-head">
-                <h2>Tune</h2>
+                <h2>{t('tune')}</h2>
                 {!isNeutral(tune) && (
                   <button type="button" className="text-button" onClick={() => setTune(DEFAULT_TUNE)}>
                     Reset
                   </button>
                 )}
               </div>
-              {TUNE_CONTROLS.map(({ key, label, min }) => (
+              {TUNE_CONTROLS.map(({ key, min }) => (
                 <label className="setting" key={key}>
-                  <span>{label}</span>
+                  <span>{t(key)}</span>
                   <input
                     type="range"
                     min={min}
@@ -711,7 +755,7 @@ export default function App() {
                 </div>
               )}
               <label className="field">
-                <span>Name</span>
+                <span>{t('name')}</span>
                 <div className="input-affix">
                   <span>:</span>
                   {/* Sized to its text, so the closing colon sits right after the name. */}
@@ -731,26 +775,29 @@ export default function App() {
 
               <div className={`status${result ? (result.withinLimit ? ' is-ok' : ' is-over') : ''}`} aria-live="polite">
                 {!source ? (
-                  'Add an image to export'
+                  t('addImageToExport')
                 ) : exporting || !result ? (
-                  `Sizing for ${platform.label}…`
+                  platform.id === 'custom' ? (
+                    t('sizing')
+                  ) : (
+                    t('sizingFor', { platform: platform.label })
+                  )
                 ) : (
                   <>
                     <span className="status-dot" />
                     <span>
-                      {result.withinLimit ? 'Ready' : 'Over limit'} · {result.size}×{result.size}{' '}
-                      {result.extension.toUpperCase()} · {formatBytes(result.bytes)} of {formatBytes(platform.maxBytes)}
+                      {result.withinLimit ? t('ready') : t('overLimit')} · {result.size}×{result.size}{' '}
+                      {result.extension.toUpperCase()} ·{' '}
+                      {t('sizeOf', { size: formatBytes(result.bytes), max: formatBytes(platform.maxBytes) })}
                     </span>
                   </>
                 )}
               </div>
-              {result && !result.withinLimit && (
-                <p className="hint">Try Fill framing, a simpler motion, or a solid background.</p>
-              )}
+              {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
 
               <button type="button" className="primary" onClick={download} disabled={!result || exporting}>
                 <Download size={16} />
-                Download {fileName}
+                {t('downloadFile', { file: fileName })}
               </button>
               <div className="save-row">
                 <label className="auto-save">
@@ -762,7 +809,7 @@ export default function App() {
                       setAutoSave(e.target.checked)
                     }}
                   />
-                  Save every download
+                  {t('saveEveryDownload')}
                 </label>
               </div>
             </div>
@@ -773,7 +820,7 @@ export default function App() {
       {error && (
         <div className="toast" role="alert">
           {error}
-          <button type="button" onClick={() => setError(null)} aria-label="Dismiss">
+          <button type="button" onClick={() => setError(null)} aria-label={t('dismiss')}>
             ×
           </button>
         </div>

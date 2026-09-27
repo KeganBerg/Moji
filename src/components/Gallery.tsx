@@ -1,6 +1,7 @@
 import { Download, Pencil, Share, Trash2, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import type { GalleryItem } from '../lib/gallery'
+import { useI18n } from '../lib/i18n'
 import { formatBytes } from '../lib/platforms'
 
 interface Props {
@@ -32,6 +33,7 @@ async function saveToPhotos(item: GalleryItem) {
 }
 
 export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: Props) {
+  const { t } = useI18n()
   const ref = useRef<HTMLDialogElement>(null)
   const canShare = useMemo(() => items.length > 0 && canSaveToPhotos(items[0]), [items])
 
@@ -57,10 +59,10 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
       <div className="gallery-inner">
         <header className="gallery-head">
           <div>
-            <h2 id="gallery-title">Gallery</h2>
-            <p>Your saved emoji, kept on this device.</p>
+            <h2 id="gallery-title">{t('gallery')}</h2>
+            <p>{t('galleryIntro')}</p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close gallery">
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t('closeGallery')}>
             <X size={18} />
           </button>
         </header>
@@ -68,16 +70,13 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
         <p className="gallery-warning" role="note">
           <TriangleAlert size={15} aria-hidden />
           <span>
-            <strong>Only saved in this browser.</strong> Clearing your cookies and site data, or using a private window,
-            deletes everything here, and it won't show up on your other devices.{' '}
-            {canShare ? 'Save to Photos or download' : 'Download'} anything you want to keep.
+            <strong>{t('galleryWarningTitle')}</strong> {t('galleryWarning')}{' '}
+            {canShare ? t('galleryKeepShare') : t('galleryKeep')}
           </span>
         </p>
 
         {items.length === 0 ? (
-          <p className="gallery-empty">
-            Nothing saved yet. Use the save button next to the generate arrow to keep an emoji here.
-          </p>
+          <p className="gallery-empty">{t('galleryEmpty')}</p>
         ) : (
           <ul className="gallery-grid">
             {items.map((item) => (
@@ -97,8 +96,8 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                       type="button"
                       className="icon-button"
                       onClick={() => saveToPhotos(item).catch(() => onDownload(item))}
-                      aria-label={`Save ${item.name} to Photos`}
-                      title="Save to Photos"
+                      aria-label={t('saveNamedToPhotos', { name: item.name })}
+                      title={t('saveToPhotos')}
                     >
                       <Share size={15} />
                     </button>
@@ -107,8 +106,8 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                     type="button"
                     className="icon-button"
                     onClick={() => onDownload(item)}
-                    aria-label={`Download ${item.name}`}
-                    title="Download"
+                    aria-label={t('downloadNamed', { name: item.name })}
+                    title={t('download')}
                   >
                     <Download size={15} />
                   </button>
@@ -116,8 +115,8 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                     type="button"
                     className="icon-button"
                     onClick={() => onEdit(item)}
-                    aria-label={`Edit ${item.name}`}
-                    title="Open in the editor"
+                    aria-label={t('editNamed', { name: item.name })}
+                    title={t('openInEditor')}
                   >
                     <Pencil size={15} />
                   </button>
@@ -125,8 +124,8 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                     type="button"
                     className="icon-button"
                     onClick={() => onDelete(item)}
-                    aria-label={`Delete ${item.name}`}
-                    title="Delete"
+                    aria-label={t('deleteNamed', { name: item.name })}
+                    title={t('delete')}
                   >
                     <Trash2 size={15} />
                   </button>
