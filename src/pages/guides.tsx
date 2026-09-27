@@ -275,6 +275,271 @@ export const GUIDES: Guide[] = [
       </>
     ),
   },
+  {
+    slug: 'deep-fried-emoji-maker',
+    description:
+      'Make deep-fried and cursed meme emoji for Slack and Discord with the Chaos slider, which values to use, and how to keep the GIF small enough to upload.',
+    heading: 'Deep-fried emoji maker',
+    lede: <>Turn any image into a warped, crunchy meme emoji with one slider, and still get a file that uploads.</>,
+    body: (
+      <>
+        <h2>What the Chaos slider does</h2>
+        <p>
+          Chaos lives in the <strong>Tune</strong> section and runs from 0 to 100. As it goes up, it layers on the
+          classic deep-fried look:
+        </p>
+        <ul>
+          <li>Fisheye warp and bulging eyes</li>
+          <li>A wobble that makes the image feel unstable</li>
+          <li>Fried, oversaturated colors</li>
+          <li>Block smear, like a badly compressed JPEG</li>
+          <li>Grain and heavy oversharpening</li>
+        </ul>
+        <h2>Pick a level</h2>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Around 30</th>
+              <td>Slightly wrong. Still recognizable, just a bit off.</td>
+            </tr>
+            <tr>
+              <th>60 to 100</th>
+              <td>Full meme. Loud, crunchy and barely holding together.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          The low end is often funnier, because people have to look twice. Try a version at 30 and one at 100 and keep
+          whichever gets the better reaction.
+        </p>
+        <h2>Add motion</h2>
+        <ol>
+          <li>Upload an image or describe one in the describe box.</li>
+          <li>Set Chaos in the Tune section.</li>
+          <li>
+            Pick <strong>Shake</strong> for panic energy or <strong>Party</strong> for a color-cycling fried look. You
+            can stack both.
+          </li>
+          <li>Choose Slack or Discord and export.</li>
+        </ol>
+        <h2>Keep the file small</h2>
+        <p>
+          Grain and noise change pixels in every frame, so deep-fried GIFs get bigger than clean ones. Moji Locker's
+          export trims colors first, then frames, until the file fits Slack's 128 KB or Discord's 256 KB. If it has to
+          cut too much, lower Chaos a little or drop to a single motion. The{' '}
+          <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains the tradeoffs.
+        </p>
+        <Cta>Deep-fry an emoji →</Cta>
+      </>
+    ),
+  },
+  {
+    slug: 'party-parrot-emoji-maker',
+    description:
+      'Make a party parrot style color-cycling emoji from any image for Slack or Discord, and stack it with other motions like Bounce or Spin.',
+    heading: 'Party parrot style emoji maker',
+    lede: <>Give any image the flashing, color-cycling party look, ready to upload to Slack or Discord.</>,
+    body: (
+      <>
+        <h2>The party look</h2>
+        <p>
+          The party parrot style is simple: a subject that cycles through bright colors on a loop. It works as a
+          celebration reaction on almost anything, from your team mascot to a coffee cup.
+        </p>
+        <h2>Make one</h2>
+        <ol>
+          <li>Upload an image or type a subject into the describe box, like "cartoon cat with a big grin".</li>
+          <li>
+            Pick the <strong>Party</strong> motion. It cycles the colors of your image.
+          </li>
+          <li>Choose Slack or Discord and export.</li>
+        </ol>
+        <h2>Stack motions</h2>
+        <p>Motions can be combined, so Party can ride on top of another one:</p>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Party + Bounce</th>
+              <td>Hopping and flashing. The classic celebration.</td>
+            </tr>
+            <tr>
+              <th>Party + Spin</th>
+              <td>Spinning disco energy.</td>
+            </tr>
+            <tr>
+              <th>Party + Wiggle</th>
+              <td>A dancing feel for smaller subjects.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2>Tips</h2>
+        <p>
+          A subject with a clear outline and a transparent background reads best, because the colors change on the
+          subject and not on a box around it. Simple shapes also keep the GIF smaller. The export trims colors and
+          frames until it fits Slack's 128 KB or Discord's 256 KB.
+        </p>
+        <p>
+          Name a set so it groups in the picker, like <code>:party_cat:</code> and <code>:party_coffee:</code>. Typing{' '}
+          <code>:party</code> then shows them all.
+        </p>
+        <Cta>Make a party emoji →</Cta>
+      </>
+    ),
+  },
+  {
+    slug: 'slack-emoji-ideas-for-work',
+    description:
+      'Custom Slack emoji ideas for work, with prompts you can paste, a motion for each one, and naming tips so your team actually uses them.',
+    heading: 'Slack emoji ideas for work',
+    lede: (
+      <>A starter set of custom emoji for a work Slack, with prompts ready to paste and the motion that suits each.</>
+    ),
+    body: (
+      <>
+        <h2>Ideas and prompts</h2>
+        <p>
+          Type any of these into Moji Locker's describe box. Short prompts with one clear subject turn out best at emoji
+          size.
+        </p>
+        <h2>Reactions</h2>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Shipped it</th>
+              <td>"small rocket launching with flames, thick outline" with Float</td>
+            </tr>
+            <tr>
+              <th>On it</th>
+              <td>"cartoon hand giving a salute" with Wiggle</td>
+            </tr>
+            <tr>
+              <th>+1 but make it fancy</th>
+              <td>"golden thumbs up with sparkles" with Party</td>
+            </tr>
+            <tr>
+              <th>Big brain</th>
+              <td>"glowing pink brain with lightning bolts" with Pulse</td>
+            </tr>
+            <tr>
+              <th>This is fine</th>
+              <td>"calm cartoon dog sipping coffee in a burning room" with Jiggle</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2>Team culture</h2>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Team mascot</th>
+              <td>Upload your logo or mascot, or describe it, with Bounce</td>
+            </tr>
+            <tr>
+              <th>Coffee</th>
+              <td>"steaming coffee mug with a smiley face" with Heartbeat</td>
+            </tr>
+            <tr>
+              <th>Standup</th>
+              <td>"cartoon person standing and waving" with Swing</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2>Status</h2>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>In a meeting</th>
+              <td>"calendar with a clock" with Static</td>
+            </tr>
+            <tr>
+              <th>Heads down</th>
+              <td>"headphones" with Pulse</td>
+            </tr>
+            <tr>
+              <th>Out sick</th>
+              <td>"thermometer with a sad face" with Shake</td>
+            </tr>
+            <tr>
+              <th>Back later</th>
+              <td>"hourglass" with Flip</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          The full set of motions is Static, Spin, Bounce, Shake, Pulse, Wiggle, Party, Float, Jiggle, Heartbeat, Flip
+          and Swing. Status emoji often work best static, so they don't distract.
+        </p>
+        <h2>Name them well</h2>
+        <p>
+          Slack names use lowercase letters, numbers, hyphens and underscores. Pick names people will guess, like{' '}
+          <code>:shipped_it:</code>, <code>:on_it:</code> and <code>:big_brain:</code>. A shared prefix groups a set in
+          the picker. The <a href="/guides/slack-emoji-size">Slack emoji size guide</a> covers the size limit and how to
+          upload.
+        </p>
+        <Cta>Make a work emoji →</Cta>
+      </>
+    ),
+  },
+  {
+    slug: 'turn-a-photo-into-an-emoji',
+    description:
+      'Turn a photo of your pet, your face or an object into a custom emoji for Slack or Discord: remove the background, frame it tight and tune it to read at small sizes.',
+    heading: 'Turn a photo into an emoji',
+    lede: <>Photos make great emoji once the background is gone and the subject fills the square. Here's how.</>,
+    body: (
+      <>
+        <h2>Pick a good photo</h2>
+        <p>
+          Choose one clear subject, well lit, facing the camera. A plain background makes the cutout much cleaner. Only
+          use photos you have the right to use, and avoid other people's faces without their permission.
+        </p>
+        <h2>Step by step</h2>
+        <ol>
+          <li>Upload the photo. On a plain background, the subject is cut out automatically.</li>
+          <li>
+            If the cutout misses, open <strong>Adjust</strong> and set <strong>Background</strong> to Keep or Remove.
+            With Remove on, raise or lower <strong>Strength</strong> until the edges look right.
+          </li>
+          <li>
+            Set <strong>Framing</strong> to <strong>Fill</strong> and keep Padding low so the subject fills the square.
+            Crop tight to the face or object. A whole body or room is too small to see.
+          </li>
+          <li>
+            In <strong>Tune</strong>, raise Contrast, Saturation and Sharpness a little, and adjust Brightness if the
+            photo is dark.
+          </li>
+          <li>Add a motion if you like, then choose Slack or Discord and export.</li>
+        </ol>
+        <h2>Make it read at 22 px</h2>
+        <p>
+          Slack and Discord show emoji at about 22 px in messages. At that size, soft photos turn to mush. Tight
+          framing, a bit of extra contrast and sharpness, and a transparent background do more than any other change.
+        </p>
+        <h2>Motions that suit photos</h2>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>Pets</th>
+              <td>Bounce, Wiggle or Jiggle</td>
+            </tr>
+            <tr>
+              <th>Faces</th>
+              <td>Shake, Heartbeat or Party</td>
+            </tr>
+            <tr>
+              <th>Objects</th>
+              <td>Spin, Float or Swing</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Photos have more colors than cartoons, so animated versions are heavier. The export trims colors and frames
+          until the file fits, and the <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains how to
+          keep more detail.
+        </p>
+        <Cta>Turn a photo into an emoji →</Cta>
+      </>
+    ),
+  },
 ]
 
 const GUIDES_INDEX: Page = {
