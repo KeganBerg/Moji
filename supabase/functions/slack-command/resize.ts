@@ -2,7 +2,7 @@
 // trimmed, centered on a square with the website's default 4% padding, and
 // scaled to 128 x 128 (well under Slack's 128 KB limit).
 
-import { Image } from 'npm:imagescript@1.3.0'
+import { Image } from 'jsr:@matmen/imagescript@1.3.1'
 
 export const EMOJI_SIZE = 128
 const PADDING = 0.04
