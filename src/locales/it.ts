@@ -26,7 +26,7 @@ const it: Messages = {
   generate: 'Genera',
   generationsLeftOne: 'Ti resta {n} generazione IA per oggi',
   generationsLeft: 'Ti restano {n} generazioni IA per oggi',
-  aiNote: 'Generazione con IA, con sfondo trasparente',
+  aiNote: 'Generazione IA, con sfondo trasparente',
   offlineNote: 'Anteprima offline: la generazione IA non è collegata in questa versione',
 
   styleFlat: 'Piatto',
@@ -44,7 +44,7 @@ const it: Messages = {
   specFrames: 'GIF fino a {n} fotogrammi',
   motion: 'Movimento',
   motionHint: 'Scegline uno o combinane alcuni',
-  motionNone: 'Statica',
+  motionNone: 'Nessuno',
   motionSpin: 'Ruota',
   motionBounce: 'Rimbalza',
   motionShake: 'Scuoti',

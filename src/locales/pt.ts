@@ -12,7 +12,7 @@ const pt: Messages = {
 
   emojiPreview: 'Prévia do emoji',
   dropTitle: 'Solte uma imagem ou descreva uma abaixo',
-  dropFormats: 'PNG, JPG, GIF ou WebP. Colar também funciona.',
+  dropFormats: 'PNG, JPG, GIF ou WebP. Você também pode colar.',
   generating: 'Gerando',
   recentImages: 'Imagens recentes',
   useImage: 'Usar {name}',
@@ -53,7 +53,7 @@ const pt: Messages = {
   motionParty: 'Festa',
   motionFloat: 'Flutuar',
   motionJiggle: 'Tremer',
-  motionHeartbeat: 'Batimento',
+  motionHeartbeat: 'Pulsação',
   motionFlip: 'Virar',
   motionSwing: 'Balançar',
   adjust: 'Ajustar',
