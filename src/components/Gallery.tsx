@@ -1,4 +1,4 @@
-import { Download, Pencil, Share, Trash2, X } from 'lucide-react'
+import { Download, Pencil, Share, Trash2, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import type { GalleryItem } from '../lib/gallery'
 import { formatBytes } from '../lib/platforms'
@@ -58,12 +58,21 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
         <header className="gallery-head">
           <div>
             <h2 id="gallery-title">Gallery</h2>
-            <p>Saved in this browser only. Clearing your browser data removes them.</p>
+            <p>Your saved emoji, kept on this device.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close gallery">
             <X size={18} />
           </button>
         </header>
+
+        <p className="gallery-warning" role="note">
+          <TriangleAlert size={15} aria-hidden />
+          <span>
+            <strong>Only saved in this browser.</strong> Clearing your cookies and site data, or using a private window,
+            deletes everything here, and it won't show up on your other devices.{' '}
+            {canShare ? 'Save to Photos or download' : 'Download'} anything you want to keep.
+          </span>
+        </p>
 
         {items.length === 0 ? (
           <p className="gallery-empty">

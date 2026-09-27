@@ -13,6 +13,8 @@
   --primary-text: #fafafa;
   --ok: #16a34a;
   --over: #dc2626;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
   --checker: #f1f1f3;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px -8px rgb(0 0 0 / 0.08);
   --radius: 14px;
@@ -52,6 +54,8 @@
     --primary-text: #09090b;
     --ok: #4ade80;
     --over: #f87171;
+    --warn: #fbbf24;
+    --warn-soft: rgb(251 191 36 / 0.12);
     --checker: #1a1a1e;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
     color-scheme: dark;
@@ -1563,6 +1567,25 @@ input[role='switch']:checked::after {
   margin: 0;
   color: var(--text-2);
   font-size: 13px;
+}
+
+.gallery-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.gallery-warning svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warn);
 }
 
 .gallery-empty {
