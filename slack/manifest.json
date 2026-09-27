@@ -19,7 +19,6 @@
         "command": "/moji",
         "url": "https://aprzkdcxlrqlgibtafwc.supabase.co/functions/v1/slack-command",
         "description": "Make a custom emoji from a description",
-        "usage_hint": "a taco wearing sunglasses",
         "should_escape": false
       }
     ]
