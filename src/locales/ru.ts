@@ -55,7 +55,7 @@ const ru: Messages = {
   motionJiggle: 'Дрожь',
   motionHeartbeat: 'Сердцебиение',
   motionFlip: 'Переворот',
-  motionSwing: 'Качание',
+  motionSwing: 'Маятник',
   adjust: 'Обработка',
   reset: 'Сбросить',
   background: 'Фон',

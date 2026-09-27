@@ -90,7 +90,7 @@ const zh: Messages = {
   ready: '就绪',
   overLimit: '超出限制',
   sizeOf: '{size} / {max}',
-  overLimitHint: '试试“填满”取景、更简单的动效或纯色背景。',
+  overLimitHint: '试试将画面适配改为“填满”、使用更简单的动效或纯色背景。',
   downloadFile: '下载 {file}',
   saveEveryDownload: '每次下载都保存',
   dismiss: '关闭',

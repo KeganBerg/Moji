@@ -103,7 +103,7 @@ const id: Messages = {
   galleryWarning:
     'Menghapus cookie dan data situs, atau menggunakan jendela pribadi, akan menghapus semua yang ada di sini, dan galeri ini tidak akan muncul di perangkat Anda yang lain.',
   galleryKeepShare: 'Simpan ke Foto atau unduh apa pun yang ingin Anda pertahankan.',
-  galleryKeep: 'Unduh apa pun yang ingin Anda simpan.',
+  galleryKeep: 'Unduh apa pun yang ingin Anda pertahankan.',
   galleryEmpty: 'Belum ada yang disimpan. Gunakan tombol simpan di samping panah Buat untuk menyimpan emoji di sini.',
   saveToPhotos: 'Simpan ke Foto',
   saveNamedToPhotos: 'Simpan {name} ke Foto',
