@@ -12,7 +12,7 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
 import { Gallery } from './components/Gallery'
@@ -56,6 +56,8 @@ const PLATFORM_OPTIONS = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
 export default function App() {
   const generator = useMemo(() => getGenerator(), [])
   const fileInput = useRef<HTMLInputElement>(null)
+  const canvasBox = useRef<HTMLDivElement>(null)
+  const previewSize = usePreviewSize(canvasBox)
   const abortRef = useRef<AbortController | null>(null)
   const nextId = useRef(1)
 
@@ -318,9 +320,9 @@ export default function App() {
             if (file) onFile(file)
           }}
         >
-          <div className={`canvas checker${generating ? ' is-busy' : ''}`}>
+          <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
             {source ? (
-              <EmojiCanvas source={source} animation={animation} options={options} size={208} />
+              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
                 <span className="empty-icon">
@@ -765,4 +767,22 @@ function downloadBlob(blob: Blob, fileName: string) {
   a.download = fileName
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/** The big preview grows with the space it has: about 60% of the box, between 160 and 384 px. */
+function usePreviewSize(ref: RefObject<HTMLDivElement | null>) {
+  const [size, setSize] = useState(208)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      const next = Math.min(384, Math.max(160, Math.min(width, height) * 0.6))
+      // Snap to 16 px steps so small resizes don't re-render every frame.
+      setSize(Math.round(next / 16) * 16)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return size
 }

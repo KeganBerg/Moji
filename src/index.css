@@ -903,7 +903,9 @@ input[role='switch']:checked::after {
 }
 
 .input-affix .affix-grow input {
-  width: 100%;
+  /* Contribute no width of its own, so the column is exactly the text's width. */
+  width: 0;
+  min-width: 100%;
 }
 
 .input-suffix span {
@@ -1218,6 +1220,52 @@ input[role='switch']:checked::after {
 }
 
 /* Tablet and phone */
+
+/* On a desktop screen the editor fills the window: the preview grows into the
+   spare height and the settings scroll inside their panel, with Download pinned
+   to the bottom so it's always in view. */
+@media (min-width: 901px) and (min-height: 620px) {
+  .shell {
+    max-width: 1600px;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: stretch;
+    height: calc(100dvh - 64px - 24px);
+  }
+
+  .stage {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .canvas {
+    flex: 1;
+    min-height: 240px;
+  }
+
+  .sidebar {
+    position: static;
+    min-height: 0;
+  }
+
+  .inspector {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .group.export {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+}
 
 @media (max-width: 900px) {
   .workspace {
