@@ -405,16 +405,18 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                className={`icon-button save-button${savedResult === result && result ? ' is-saved' : ''}`}
-                onClick={saveCurrent}
-                disabled={!result || exporting || savedResult === result}
-                aria-label={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
-                title={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
-              >
-                {savedResult === result && result ? <SaveCheck size={18} /> : <Save size={18} />}
-              </button>
+              {active && (
+                <button
+                  type="button"
+                  className={`icon-button save-button${savedResult === result && result ? ' is-saved' : ''}`}
+                  onClick={saveCurrent}
+                  disabled={!result || exporting || savedResult === result}
+                  aria-label={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                  title={savedResult === result && result ? 'Saved to gallery' : 'Save to gallery'}
+                >
+                  {savedResult === result && result ? <SaveCheck size={18} /> : <Save size={18} />}
+                </button>
+              )}
               <button
                 type="submit"
                 className="send"
