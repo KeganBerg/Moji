@@ -4,7 +4,6 @@ import type { Page } from './pages'
 
 interface Guide {
   slug: string
-  title: string
   description: string
   heading: string
   lede: ReactNode
@@ -14,7 +13,6 @@ interface Guide {
 export const GUIDES: Guide[] = [
   {
     slug: 'slack-emoji-size',
-    title: 'Slack emoji size and limits · Moji Locker',
     description:
       'The exact size, file limit, formats and frame count Slack accepts for custom emoji, and how to add one to your workspace.',
     heading: 'Slack emoji size and limits',
@@ -87,7 +85,6 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: 'add-custom-emoji-to-discord',
-    title: 'How to add custom emoji to Discord · Moji Locker',
     description:
       'Step-by-step: upload custom and animated emoji to a Discord server, plus the size limit, name rules and permissions you need.',
     heading: 'How to add custom emoji to Discord',
@@ -154,7 +151,6 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: 'animated-slack-emoji',
-    title: "Animated emoji that fit Slack's 128 KB · Moji Locker",
     description:
       "How to make an animated GIF emoji small enough for Slack's 128 KB limit without making it look choppy or blotchy.",
     heading: "Animated emoji that fit Slack's 128 KB",
@@ -206,7 +202,6 @@ export const GUIDES: Guide[] = [
 ]
 
 const GUIDES_INDEX: Page = {
-  title: 'Custom emoji guides · Moji Locker',
   description: 'Guides to custom emoji sizes, file limits and uploading for Slack and Discord.',
   heading: 'Guides',
   lede: <>Short, practical answers to the questions people ask most about custom emoji.</>,

@@ -6,8 +6,6 @@ import { GUIDE_PAGES } from './guides'
 const UPDATED = 'September 26, 2026'
 
 export interface Page {
-  /** Browser tab and search result title. */
-  title: string
   /** Meta description, about 150 characters. */
   description: string
   heading: string
@@ -94,7 +92,6 @@ const FAQ: { q: string; a: ReactNode }[] = [
 
 const BASE_PAGES: Record<string, Page> = {
   faq: {
-    title: 'FAQ · Moji Locker',
     description:
       'Answers about emoji sizes, file limits, adding emoji to Slack and Discord, AI generation limits and privacy.',
     heading: 'Questions',
@@ -115,7 +112,6 @@ const BASE_PAGES: Record<string, Page> = {
     ),
   },
   privacy: {
-    title: 'Privacy · Moji Locker',
     description:
       'What Moji Locker collects: uploads stay in your browser, and AI descriptions are sent to OpenAI but not stored.',
     heading: 'Privacy',
@@ -174,7 +170,6 @@ const BASE_PAGES: Record<string, Page> = {
     ),
   },
   terms: {
-    title: 'Terms · Moji Locker',
     description: 'The terms for using Moji Locker, the free custom emoji maker for Slack and Discord.',
     heading: 'Terms',
     lede: <>The short version: make fun emoji, don't make harmful ones. Last updated {UPDATED}.</>,
