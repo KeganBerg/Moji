@@ -53,6 +53,7 @@ export function SiteFooter() {
       </p>
       <nav className="footer-links" aria-label="Site">
         <a href="/guides">Guides</a>
+        <a href="/slack">Slack app</a>
         <a href="/faq">FAQ</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>

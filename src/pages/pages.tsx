@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Mail } from '../components/InfoLinks'
+import { SlackInstall } from '../components/SlackInstall'
 import { FEEDBACK_URL } from '../lib/site'
 import { GUIDE_PAGES } from './guides'
 
-const UPDATED = 'September 26, 2026'
+const UPDATED = 'September 27, 2026'
 
 export interface Page {
   /** Meta description, about 150 characters. */
@@ -142,6 +143,13 @@ const BASE_PAGES: Record<string, Page> = {
           The raw IP address is never stored, and the hash changes every day, so it can't be used to follow you over
           time.
         </p>
+        <h2>Slack app</h2>
+        <p>
+          When you use /moji in Slack, Slack sends us your description plus your workspace and user IDs. The description
+          is handled like any other generation. The IDs are combined with the date and hashed to enforce daily limits;
+          the raw IDs are not stored. The finished emoji is kept in our private storage so the download link works for 7
+          days. The app can't read your messages or channels.
+        </p>
         <h2>Analytics</h2>
         <p>
           We may use Cloudflare Web Analytics to count visits. It uses no cookies, collects no personal data and doesn't
@@ -165,6 +173,47 @@ const BASE_PAGES: Record<string, Page> = {
         <p>
           You can use Moji Locker without generating anything, in which case nothing you make leaves your device. For
           questions or deletion requests, email <Mail />.
+        </p>
+      </>
+    ),
+  },
+  slack: {
+    description:
+      'Add Moji Locker to Slack and make custom emoji with /moji, sized for Slack and ready to upload to your workspace.',
+    heading: 'Moji Locker for Slack',
+    lede: <>Make a custom emoji without leaving Slack. Type /moji, describe it, and it's ready in seconds.</>,
+    body: (
+      <>
+        <SlackInstall />
+        <h2>How it works</h2>
+        <ol>
+          <li>
+            In any channel or DM, type <code>/moji a taco wearing sunglasses</code>.
+          </li>
+          <li>
+            Moji Locker replies with the finished 128 × 128 emoji. Only you see the reply, so it doesn't clutter the
+            channel.
+          </li>
+          <li>
+            Choose <strong>Download</strong>, then <strong>Add to Slack</strong> to open your workspace's Add Emoji
+            page, upload the file and give it a name.
+          </li>
+        </ol>
+        <p>
+          Start with a style to change the look: <code>/moji pixel a happy ghost</code>. The styles are flat, 3d, pixel,
+          sticker and hand-drawn. For motion, text and your own images, choose <strong>Edit in Moji Locker</strong> to
+          open the emoji here.
+        </p>
+        <h2>Why the last step is yours</h2>
+        <p>
+          Slack only lets apps add custom emoji on Enterprise plans, so you upload the file yourself. Some workspaces
+          also limit who can add emoji; if the upload option is missing, ask a workspace admin.
+        </p>
+        <h2>Limits and privacy</h2>
+        <p>
+          The Slack app shares the website's daily AI limits, counted per Slack user. It receives your description and
+          your workspace and user IDs, which it hashes to enforce limits. It can't read your messages or channels. See
+          the <a href="/privacy">privacy policy</a> for details.
         </p>
       </>
     ),

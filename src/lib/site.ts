@@ -15,3 +15,13 @@ export function loadAnalytics() {
   script.dataset.cfBeacon = JSON.stringify({ token, spa: true })
   document.head.appendChild(script)
 }
+
+// The Slack app's public Client ID (Basic Information on api.slack.com). Empty
+// until the app has public distribution turned on; /slack then shows the
+// Add to Slack button.
+export const SLACK_CLIENT_ID = ''
+
+export const SLACK_INSTALL_URL = `https://slack.com/oauth/v2/authorize?${new URLSearchParams({
+  client_id: SLACK_CLIENT_ID,
+  scope: 'commands',
+})}`
