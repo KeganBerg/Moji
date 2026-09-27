@@ -60,7 +60,7 @@ export function sanitizeName(raw: string, platform: PlatformId): string {
     name = name.replace(/[^a-z0-9_-]/g, '').slice(0, 100)
   }
   name = name.replace(/^[-_]+|[-_]+$/g, '')
-  if (name.length < 2) name = (name + 'emoji').slice(0, 5)
+  if (name.length < 2) name = name ? `${name}_emoji` : 'emoji'
   return name
 }
 

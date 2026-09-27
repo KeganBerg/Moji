@@ -5,11 +5,14 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Single-page app: send unknown paths to index.html.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# No catch-all rewrite: the editor lives at / and every other page is a
+# prerendered file, so unknown paths get dist/404.html with a real 404 status.
+
+# Vite puts a content hash in every file name under /assets, so they never change.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 # Browser security headers. No script CSP: AdSense Auto ads loads scripts and
 # frames from many Google domains, so only framing is locked down.

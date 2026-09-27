@@ -266,8 +266,29 @@ const BASE_PAGES: Record<string, Page> = {
 
 export const PAGES: Record<string, Page> = { ...BASE_PAGES, ...GUIDE_PAGES }
 
-/** Page key for a pathname, e.g. "/guides/slack-emoji-size/" -> "guides/slack-emoji-size", or null for the editor. */
+/** Served by Netlify as 404.html for any path without a file; not in the sitemap. */
+export const NOT_FOUND = '404'
+export const NOT_FOUND_PAGE: Page = {
+  description: 'This page does not exist.',
+  heading: 'Page not found',
+  lede: (
+    <>
+      That link may be mistyped or out of date. Try the <a href="/">editor</a> or the <a href="/guides">guides</a>.
+    </>
+  ),
+  body: null,
+}
+
+export function getPage(key: string): Page {
+  return key === NOT_FOUND ? NOT_FOUND_PAGE : PAGES[key]
+}
+
+/**
+ * Page key for a pathname, e.g. "/guides/slack-emoji-size/" -> "guides/slack-emoji-size",
+ * null for the editor, or NOT_FOUND for anything else.
+ */
 export function pageFor(pathname: string): string | null {
   const key = pathname.replace(/\/+$/, '').slice(1)
-  return Object.hasOwn(PAGES, key) ? key : null
+  if (key === '' || key === 'index.html') return null
+  return Object.hasOwn(PAGES, key) ? key : NOT_FOUND
 }

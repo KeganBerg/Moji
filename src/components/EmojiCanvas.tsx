@@ -11,10 +11,12 @@ interface Props {
   size: number
   className?: string
   label?: string
+  /** Hide from assistive tech when a visible label already names it. */
+  decorative?: boolean
 }
 
 /** Live, looping preview of the emoji drawn exactly the way export draws it. */
-export function EmojiCanvas({ source, animation, options, size, className, label }: Props) {
+export function EmojiCanvas({ source, animation, options, size, className, label, decorative }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -32,7 +34,20 @@ export function EmojiCanvas({ source, animation, options, size, className, label
     if (animation.frames <= 1) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduceMotion) return
-    return subscribe(draw)
+    // Only animate while on screen; off-screen previews would still cost a redraw every frame.
+    let stop: (() => void) | null = null
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !stop) stop = subscribe(draw)
+      else if (!entry.isIntersecting && stop) {
+        stop()
+        stop = null
+      }
+    })
+    observer.observe(canvas)
+    return () => {
+      observer.disconnect()
+      stop?.()
+    }
   }, [source, animation, options, size])
 
   return (
@@ -40,8 +55,7 @@ export function EmojiCanvas({ source, animation, options, size, className, label
       ref={ref}
       className={className}
       style={{ width: size, height: size }}
-      role="img"
-      aria-label={label ?? `${animation.label} emoji preview`}
+      {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': label ?? animation.label })}
     />
   )
 }

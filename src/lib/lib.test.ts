@@ -6,6 +6,7 @@ import { opaqueBounds, rotatedSize } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 import { isHalloweenSeason } from './season'
+import { NOT_FOUND, pageFor } from '../pages/pages'
 
 describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
@@ -45,6 +46,15 @@ describe('gif sizing', () => {
       expect(delay).toBeGreaterThanOrEqual(20)
     }
     expect(frameTiming(getAnimation('spin'), 10, 1).count).toBe(10)
+  })
+  it('loops at the preview speed with no leftover time', () => {
+    for (const a of ANIMATIONS.filter((a) => a.frames > 1)) {
+      for (const step of [1, 2, 3]) {
+        const { count, delay } = frameTiming(a, PLATFORMS.slack.maxFrames, step)
+        expect(delay % 10).toBe(0)
+        expect(count * delay).toBe(a.duration)
+      }
+    }
   })
   it('encodes a valid looping GIF', () => {
     const size = 8
@@ -227,5 +237,14 @@ describe('isHalloweenSeason', () => {
     expect(isHalloweenSeason(new Date(2026, 8, 15))).toBe(true)
     expect(isHalloweenSeason(new Date(2026, 9, 31, 23, 59))).toBe(true)
     expect(isHalloweenSeason(new Date(2026, 10, 1))).toBe(false)
+  })
+})
+
+describe('pageFor', () => {
+  it('routes the editor, info pages and unknown paths', () => {
+    expect(pageFor('/')).toBeNull()
+    expect(pageFor('/faq/')).toBe('faq')
+    expect(pageFor('/guides/nope')).toBe(NOT_FOUND)
+    expect(pageFor('/does-not-exist')).toBe(NOT_FOUND)
   })
 })

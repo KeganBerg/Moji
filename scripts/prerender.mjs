@@ -7,7 +7,7 @@ import { join } from 'node:path'
 const SITE = 'https://moji.locker'
 const dist = new URL('../dist/', import.meta.url).pathname
 const ssr = new URL('../dist-ssr/prerender.js', import.meta.url)
-const { pages, render } = await import(ssr.href)
+const { pages, render, NOT_FOUND } = await import(ssr.href)
 const template = await readFile(join(dist, 'index.html'), 'utf8')
 
 const escape = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -28,6 +28,17 @@ for (const key of pages) {
   const url = `${SITE}/${key}`
   await mkdir(join(dist, key), { recursive: true })
   await writeFile(join(dist, key, 'index.html'), fill(template, { description, url, body: html }))
+}
+
+// Netlify serves 404.html with a 404 status for any path that has no file.
+{
+  const { description, html } = render(NOT_FOUND)
+  const page = fill(template, { description, url: SITE, body: html }).replace(
+    '</head>',
+    '  <meta name="robots" content="noindex" />\n  </head>',
+  )
+  if (!page.includes('noindex')) throw new Error('404 page is missing noindex')
+  await writeFile(join(dist, '404.html'), page)
 }
 
 const urls = ['', ...pages].map((p) => `  <url><loc>${SITE}/${p}</loc></url>`).join('\n')

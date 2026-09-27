@@ -27,10 +27,10 @@ export function ChatPreview({ source, animation, options, name, seed }: Props) {
             <span>{light.time}</span>
           </div>
           <p>
-            {light.message} <EmojiCanvas {...common} size={22} label={`:${name}: inline, light theme`} />
+            {light.message} <EmojiCanvas {...common} size={22} label={`:${name}:`} />
           </p>
           <span className="chat-reaction">
-            <EmojiCanvas {...common} size={16} label={`:${name}: reaction`} /> {2 + (seed % 7)}
+            <EmojiCanvas {...common} size={16} label={`:${name}:`} /> {2 + (seed % 7)}
           </span>
         </div>
       </div>
@@ -42,7 +42,7 @@ export function ChatPreview({ source, animation, options, name, seed }: Props) {
             <span>{dark.time}</span>
           </div>
           <p>{dark.message}</p>
-          <EmojiCanvas {...common} size={48} label={`:${name}: large, dark theme`} />
+          <EmojiCanvas {...common} size={48} label={`:${name}:`} />
         </div>
       </div>
     </div>

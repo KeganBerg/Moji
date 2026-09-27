@@ -38,6 +38,7 @@ import { useSeason } from './lib/season'
 import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type RenderOptions } from './lib/render'
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 import { I18nProvider } from './components/I18nProvider'
+import { NumberField } from './components/NumberField'
 import { LANGUAGES, setLanguage, useI18n, type LangCode, type MessageKey } from './lib/i18n'
 import { errorText, toUiError, type UiError } from './lib/errors'
 
@@ -178,10 +179,18 @@ function Editor() {
     setError(null)
     resetAdjust()
   }
-  // Quarter turns snap to the nearest 90° and wrap into -180..180.
+  // Switching images starts the new one clean, as a fresh upload does.
+  const selectImage = (id: number) => {
+    if (id === activeId) return
+    setActiveId(id)
+    setRotation(0)
+    setFlip(false)
+    setTune(DEFAULT_TUNE)
+  }
+  // Quarter turns go to the next multiple of 90° in that direction and wrap into -180..180.
   const turn = (dir: 1 | -1) =>
     setRotation((r) => {
-      const next = Math.round(r / 90) * 90 + dir * 90
+      const next = dir > 0 ? Math.floor(r / 90) * 90 + 90 : Math.ceil(r / 90) * 90 - 90
       return next > 180 ? next - 360 : next <= -180 ? next + 360 : next
     })
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
@@ -279,12 +288,13 @@ function Editor() {
   useEffect(() => {
     if (!source) return
     let cancelled = false
+    const controller = new AbortController()
     const timer = setTimeout(async () => {
       try {
         const out =
           animation.frames > 1
-            ? await exportGif(source, platform.size, options, animation, platform)
-            : await exportPng(source, platform.size, options, platform)
+            ? await exportGif(source, platform.size, options, animation, platform, controller.signal)
+            : await exportPng(source, platform.size, options, platform, controller.signal)
         if (!cancelled) setExported({ key: exportKey, result: out })
       } catch (e) {
         if (!cancelled) setError(toUiError(e))
@@ -292,6 +302,7 @@ function Editor() {
     }, 200)
     return () => {
       cancelled = true
+      controller.abort()
       clearTimeout(timer)
     }
   }, [source, options, animation, platform, exportKey])
@@ -302,8 +313,10 @@ function Editor() {
       .catch(() => {})
   }, [])
 
+  const saving = useRef<ExportResult | null>(null)
   const saveCurrent = async () => {
-    if (!result || savedResult === result) return
+    if (!result || savedResult === result || saving.current === result) return
+    saving.current = result
     try {
       const item = await saveToGallery({
         name: emojiName,
@@ -317,6 +330,8 @@ function Editor() {
       setSavedResult(result)
     } catch {
       setError({ key: 'saveFailed' })
+    } finally {
+      saving.current = null
     }
   }
 
@@ -378,6 +393,7 @@ function Editor() {
       </SiteHeader>
 
       <main className="workspace">
+        <h1 className="sr-only">Moji Locker</h1>
         <section
           className={`stage${dragging ? ' is-dragging' : ''}`}
           aria-label={t('emojiPreview')}
@@ -391,13 +407,15 @@ function Editor() {
           onDrop={(e) => {
             e.preventDefault()
             setDragging(false)
-            const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'))
+            const files = [...e.dataTransfer.files]
+            const file = files.find((f) => f.type.startsWith('image/'))
             if (file) onFile(file)
+            else if (files.length) setError({ key: 'errNotImage' })
           }}
         >
           <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
             {source ? (
-              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} />
+              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} label={t('emojiPreview')} />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
                 <span className={`empty-icon${season.on ? ' is-ghost' : ''}`}>
@@ -408,11 +426,14 @@ function Editor() {
               </button>
             )}
             {generating && (
-              <div className="busy" role="status">
+              <div className="busy" aria-hidden>
                 <LoaderCircle className="spin" size={18} />
                 {t('generating')}
               </div>
             )}
+            <span className="sr-only" role="status">
+              {generating ? t('generating') : ''}
+            </span>
           </div>
 
           {source && active && (
@@ -428,7 +449,7 @@ function Editor() {
                       key={h.id}
                       type="button"
                       className={`history-item checker${h.id === activeId ? ' is-active' : ''}`}
-                      onClick={() => setActiveId(h.id)}
+                      onClick={() => selectImage(h.id)}
                       aria-label={t('useImage', { name: h.name })}
                       aria-pressed={h.id === activeId}
                     >
@@ -539,26 +560,14 @@ function Editor() {
                   <label className="field">
                     <span>{t('size')}</span>
                     <div className="input-suffix">
-                      <input
-                        type="number"
-                        min={16}
-                        max={512}
-                        value={customSize}
-                        onChange={(e) => setCustomSize(Math.min(512, Math.max(16, Number(e.target.value) || 128)))}
-                      />
+                      <NumberField value={customSize} min={16} max={512} onChange={setCustomSize} />
                       <span>px</span>
                     </div>
                   </label>
                   <label className="field">
                     <span>{t('maxFile')}</span>
                     <div className="input-suffix">
-                      <input
-                        type="number"
-                        min={8}
-                        max={5120}
-                        value={customKb}
-                        onChange={(e) => setCustomKb(Math.min(5120, Math.max(8, Number(e.target.value) || 256)))}
-                      />
+                      <NumberField value={customKb} min={8} max={5120} onChange={setCustomKb} />
                       <span>KB</span>
                     </div>
                   </label>
@@ -586,7 +595,7 @@ function Editor() {
                     >
                       <span className="motion-thumb">
                         {source ? (
-                          <EmojiCanvas source={source} animation={a} options={options} size={36} />
+                          <EmojiCanvas source={source} animation={a} options={options} size={36} decorative />
                         ) : (
                           <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
                         )}
@@ -603,7 +612,7 @@ function Editor() {
                 <h2>{t('adjust')}</h2>
                 {adjustChanged && (
                   <button type="button" className="text-button" onClick={resetAdjust}>
-                    Reset
+                    {t('reset')}
                   </button>
                 )}
               </div>
@@ -632,7 +641,7 @@ function Editor() {
                     onChange={(e) => updateActive({ cutoutStrength: Number(e.target.value) })}
                     onDoubleClick={() => updateActive({ cutoutStrength: DEFAULT_STRENGTH })}
                   />
-                  <output>{active.cutoutStrength}</output>
+                  <output aria-hidden>{active.cutoutStrength}</output>
                 </label>
               )}
               <div className="setting">
@@ -657,8 +666,9 @@ function Editor() {
                   step={0.01}
                   value={padding}
                   onChange={(e) => setPadding(Number(e.target.value))}
+                  aria-valuetext={`${Math.round(padding * 100)}%`}
                 />
-                <output>{Math.round(padding * 100)}%</output>
+                <output aria-hidden>{Math.round(padding * 100)}%</output>
               </label>
               <label className="setting">
                 <span>{t('rotate')}</span>
@@ -670,8 +680,9 @@ function Editor() {
                   value={rotation}
                   onChange={(e) => setRotation(Number(e.target.value))}
                   onDoubleClick={() => setRotation(0)}
+                  aria-valuetext={`${rotation}°`}
                 />
-                <output>{rotation}°</output>
+                <output aria-hidden>{rotation}°</output>
               </label>
               <div className="setting">
                 <span>{t('turn')}</span>
@@ -728,7 +739,7 @@ function Editor() {
                 <h2>{t('tune')}</h2>
                 {!isNeutral(tune) && (
                   <button type="button" className="text-button" onClick={() => setTune(DEFAULT_TUNE)}>
-                    Reset
+                    {t('reset')}
                   </button>
                 )}
               </div>
@@ -744,7 +755,7 @@ function Editor() {
                     onChange={(e) => setTune((t) => ({ ...t, [key]: Number(e.target.value) }))}
                     onDoubleClick={() => setTune((t) => ({ ...t, [key]: 0 }))}
                   />
-                  <output>{tune[key] > 0 ? `+${tune[key]}` : tune[key]}</output>
+                  <output aria-hidden>{tune[key] > 0 ? `+${tune[key]}` : tune[key]}</output>
                 </label>
               ))}
             </div>
@@ -752,7 +763,7 @@ function Editor() {
             <div className="group export" ref={exportBar}>
               {source && (
                 <div className="export-thumb checker" aria-hidden>
-                  <EmojiCanvas source={source} animation={animation} options={options} size={44} />
+                  <EmojiCanvas source={source} animation={animation} options={options} size={44} decorative />
                 </div>
               )}
               <label className="field">
@@ -797,8 +808,8 @@ function Editor() {
               {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
 
               <button type="button" className="primary" onClick={download} disabled={!result || exporting}>
-                <Download size={16} />
-                {t('downloadFile', { file: fileName })}
+                <Download size={16} aria-hidden />
+                <span className="primary-label">{t('downloadFile', { file: fileName })}</span>
               </button>
               <div className="save-row">
                 <label className="auto-save">
@@ -829,7 +840,7 @@ function Editor() {
 
       {source && !previewInView && (
         <div className="mini-preview checker" aria-hidden>
-          <EmojiCanvas source={source} animation={animation} options={options} size={64} />
+          <EmojiCanvas source={source} animation={animation} options={options} size={64} decorative />
         </div>
       )}
 

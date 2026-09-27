@@ -35,6 +35,9 @@ async function saveToPhotos(item: GalleryItem) {
 export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: Props) {
   const { t } = useI18n()
   const ref = useRef<HTMLDialogElement>(null)
+  const closeButton = useRef<HTMLButtonElement>(null)
+  // After a delete, keep keyboard focus in the list instead of dropping it to the page.
+  const focusAfterDelete = useRef<number | null | undefined>(undefined)
   const canShare = useMemo(() => items.length > 0 && canSaveToPhotos(items[0]), [items])
 
   useEffect(() => {
@@ -43,6 +46,20 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
     if (open && !dialog.open) dialog.showModal()
     if (!open && dialog.open) dialog.close()
   }, [open])
+
+  useEffect(() => {
+    const id = focusAfterDelete.current
+    if (id === undefined) return
+    focusAfterDelete.current = undefined
+    const next = id !== null && ref.current?.querySelector<HTMLElement>(`[data-delete="${CSS.escape(String(id))}"]`)
+    ;(next || closeButton.current)?.focus()
+  }, [items])
+
+  const remove = (index: number) => {
+    const neighbour = items[index + 1] ?? items[index - 1]
+    focusAfterDelete.current = neighbour ? neighbour.id : null
+    onDelete(items[index])
+  }
 
   // Saved GIFs animate on their own once they have a URL.
   const urls = useMemo(() => new Map(items.map((i) => [i.id, URL.createObjectURL(i.blob)])), [items])
@@ -62,7 +79,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
             <h2 id="gallery-title">{t('gallery')}</h2>
             <p>{t('galleryIntro')}</p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label={t('closeGallery')}>
+          <button ref={closeButton} type="button" className="icon-button" onClick={onClose} aria-label={t('closeGallery')}>
             <X size={18} />
           </button>
         </header>
@@ -79,7 +96,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
           <p className="gallery-empty">{t('galleryEmpty')}</p>
         ) : (
           <ul className="gallery-grid">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <li key={item.id} className="gallery-card">
                 <div className="gallery-thumb checker">
                   <img src={urls.get(item.id)} alt={item.name} />
@@ -87,7 +104,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                 <div className="gallery-meta">
                   <strong>:{item.name}:</strong>
                   <span>
-                    {item.platform} · {item.extension.toUpperCase()} · {formatBytes(item.bytes)}
+                    {item.platform === 'Custom' ? t('custom') : item.platform} · {item.extension.toUpperCase()} · {formatBytes(item.bytes)}
                   </span>
                 </div>
                 <div className="gallery-actions">
@@ -123,7 +140,8 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                   <button
                     type="button"
                     className="icon-button"
-                    onClick={() => onDelete(item)}
+                    data-delete={item.id}
+                    onClick={() => remove(index)}
                     aria-label={t('deleteNamed', { name: item.name })}
                     title={t('delete')}
                   >

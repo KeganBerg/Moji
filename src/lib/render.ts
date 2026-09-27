@@ -159,10 +159,15 @@ export function drawFrame(
     ctx.fillRect(0, 0, size, size)
   }
   const avail = size * (1 - opts.padding * 2) * inset
-  // Fit the rotated image, so turning it never crops a corner.
+  // Fit: the whole rotated image stays inside the frame, so turning it never
+  // crops a corner. Fill: the rotated image still covers the whole frame, so
+  // turning it never leaves empty corners.
   const box = rotatedSize(source.width, source.height, opts.rotation)
+  const rad = (opts.rotation * Math.PI) / 180
   const fitScale =
-    opts.fit === 'cover' ? Math.max(avail / box.w, avail / box.h) : Math.min(avail / box.w, avail / box.h)
+    opts.fit === 'cover'
+      ? (avail * (Math.abs(Math.cos(rad)) + Math.abs(Math.sin(rad)))) / Math.min(source.width, source.height)
+      : Math.min(avail / box.w, avail / box.h)
   const dw = source.width * fitScale
   const dh = source.height * fitScale
 
