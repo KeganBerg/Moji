@@ -111,6 +111,8 @@ h2 {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 24px 32px;
+  /* Keep clear of the notch when a phone is held sideways. */
+  padding-inline: max(24px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-right, 0px));
 }
 
 .topbar {
@@ -1360,7 +1362,10 @@ input[role='switch']:checked::after {
     inset: auto 0 0;
     z-index: 15;
     gap: 8px;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    /* Clear the home indicator and the screen's rounded corners on iPhones
+       (the insets are only reported because of viewport-fit=cover). */
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) max(14px, calc(6px + env(safe-area-inset-bottom, 0px)))
+      max(16px, env(safe-area-inset-left, 0px));
     border-radius: 0;
     box-shadow: 0 -8px 24px -12px rgb(0 0 0 / 0.3);
   }
@@ -1406,7 +1411,7 @@ input[role='switch']:checked::after {
 @media (max-width: 560px) {
   /* Sides only: the bottom padding keeps room for the fixed Download bar. */
   .shell {
-    padding-inline: 16px;
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
   }
 
   .canvas {
