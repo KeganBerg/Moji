@@ -1,4 +1,4 @@
-import { Download, Pencil, Trash2, X } from 'lucide-react'
+import { Download, Pencil, Share, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import type { GalleryItem } from '../lib/gallery'
 import { formatBytes } from '../lib/platforms'
@@ -12,8 +12,28 @@ interface Props {
   onDelete: (item: GalleryItem) => void
 }
 
+const fileOf = (item: GalleryItem) =>
+  new File([item.blob], `${item.name}.${item.extension}`, { type: item.blob.type || `image/${item.extension}` })
+
+// Phones can hand the file to the share sheet, where "Save Image" puts it in Photos.
+// A plain download on iOS only reaches the Files app.
+const canSaveToPhotos = (item: GalleryItem) =>
+  typeof navigator.canShare === 'function' &&
+  window.matchMedia('(pointer: coarse)').matches &&
+  navigator.canShare({ files: [fileOf(item)] })
+
+async function saveToPhotos(item: GalleryItem) {
+  try {
+    await navigator.share({ files: [fileOf(item)] })
+  } catch (e) {
+    // Closing the share sheet isn't an error.
+    if ((e as Error).name !== 'AbortError') throw e
+  }
+}
+
 export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
+  const canShare = useMemo(() => items.length > 0 && canSaveToPhotos(items[0]), [items])
 
   useEffect(() => {
     const dialog = ref.current
@@ -47,7 +67,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
 
         {items.length === 0 ? (
           <p className="gallery-empty">
-            Nothing saved yet. Use <strong>Save to gallery</strong> under the download button to keep an emoji here.
+            Nothing saved yet. Use the save button next to the generate arrow to keep an emoji here.
           </p>
         ) : (
           <ul className="gallery-grid">
@@ -63,6 +83,17 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                   </span>
                 </div>
                 <div className="gallery-actions">
+                  {canShare && (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => saveToPhotos(item).catch(() => onDownload(item))}
+                      aria-label={`Save ${item.name} to Photos`}
+                      title="Save to Photos"
+                    >
+                      <Share size={15} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="icon-button"
