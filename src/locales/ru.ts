@@ -1,7 +1,7 @@
 import type { Messages } from './en'
 
 const ru: Messages = {
-  home: 'Главная Moji Locker',
+  home: 'Главная страница Moji Locker',
   slackApp: 'Приложение для Slack',
   slackAppTitle: 'Создавайте эмодзи прямо в Slack с помощью /moji',
   gallery: 'Галерея',
@@ -11,7 +11,7 @@ const ru: Messages = {
   halloweenOff: 'Выключить тему Хэллоуина',
 
   emojiPreview: 'Предпросмотр эмодзи',
-  dropTitle: 'Перетащите изображение или опишите его ниже',
+  dropTitle: 'Перетащите изображение или опишите нужное ниже',
   dropFormats: 'PNG, JPG, GIF или WebP. Можно и вставить из буфера.',
   generating: 'Создаём',
   recentImages: 'Недавние изображения',
@@ -36,10 +36,10 @@ const ru: Messages = {
   styleSketch: 'Скетч',
 
   settings: 'Настройки',
-  destination: 'Назначение',
+  destination: 'Платформа',
   custom: 'Свой',
   size: 'Размер',
-  maxFile: 'Лимит файла',
+  maxFile: 'Макс. размер файла',
   specUnder: 'до {size}',
   specFrames: 'Кадров в GIF: до {n}',
   motion: 'Анимация',
@@ -49,7 +49,7 @@ const ru: Messages = {
   motionBounce: 'Прыжки',
   motionShake: 'Тряска',
   motionPulse: 'Пульс',
-  motionWiggle: 'Виляние',
+  motionWiggle: 'Покачивание',
   motionParty: 'Вечеринка',
   motionFloat: 'Парение',
   motionJiggle: 'Дрожь',
@@ -85,7 +85,7 @@ const ru: Messages = {
 
   name: 'Название',
   addImageToExport: 'Добавьте изображение для экспорта',
-  sizingFor: 'Подгоняем размер: {platform}…',
+  sizingFor: 'Подгоняем размер под {platform}…',
   sizing: 'Подгоняем размер…',
   ready: 'Готово',
   overLimit: 'Превышен лимит',

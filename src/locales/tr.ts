@@ -26,7 +26,7 @@ const tr: Messages = {
   generate: 'Oluştur',
   generationsLeftOne: 'Bugün kalan yapay zekâ oluşturma hakkı: {n}',
   generationsLeft: 'Bugün kalan yapay zekâ oluşturma hakkı: {n}',
-  aiNote: 'Yapay zekâ ile oluşturma, şeffaf arka planla',
+  aiNote: 'Şeffaf arka planlı yapay zekâ ile oluşturma',
   offlineNote: 'Çevrimdışı önizleme: Bu sürümde yapay zekâ ile oluşturma bağlı değil',
 
   styleFlat: 'Düz',
