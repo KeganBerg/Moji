@@ -1371,24 +1371,26 @@ input[role='switch']:checked::after {
 
   .group.export {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     column-gap: 12px;
     align-items: center;
   }
 
-  .group.export > * {
+  /* With an emoji loaded, its live thumbnail sits in a column on the left and
+     everything else lines up to its right. */
+  .group.export:has(> .export-thumb) {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .group.export:has(> .export-thumb) > * {
     grid-column: 2;
   }
 
   .group.export > .export-thumb {
     grid-column: 1;
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 4;
     align-self: start;
     display: grid;
-  }
-
-  .group.export > .save-row {
-    grid-column: 1 / -1;
   }
 
   /* The bar already shows the emoji, so the floating copy isn't needed. */
@@ -1686,203 +1688,55 @@ input[role='switch']:checked::after {
   color: var(--accent);
 }
 
-.shell {
-  position: relative;
-  z-index: 1;
+/* Jack-o'-lantern logo: the carved face glows with a slow, uneven flicker. */
+.wordmark .carve,
+.wordmark .tooth {
+  stroke: none;
 }
 
-.spooky {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
+.wordmark .tooth {
+  fill: var(--primary);
 }
 
-.fog {
-  position: absolute;
-  width: 70vmax;
-  height: 70vmax;
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.5;
+.wordmark .carve {
+  fill: #ffd27a;
+  animation: candle 5s ease-in-out infinite;
 }
 
-.fog-a {
-  left: -25vmax;
-  bottom: -35vmax;
-  background: radial-gradient(closest-side, rgb(249 115 22 / 0.14), transparent);
-  animation: fog-drift 70s ease-in-out infinite alternate;
-}
-
-.fog-b {
-  right: -30vmax;
-  top: -40vmax;
-  background: radial-gradient(closest-side, rgb(134 217 122 / 0.07), transparent);
-  animation: fog-drift 90s ease-in-out -30s infinite alternate-reverse;
-}
-
-@keyframes fog-drift {
-  to {
-    transform: translate(12vmax, -6vmax) scale(1.1);
-  }
-}
-
-.bat {
-  position: absolute;
-  left: 0;
-  width: 34px;
-  opacity: 0;
-  color: #0a0706;
-  animation: bat-fly 34s linear infinite;
-}
-
-.bat svg {
-  display: block;
-  fill: #5b4636;
-}
-
-.bat-1 {
-  top: 14px;
-}
-
-.bat-2 {
-  top: 34px;
-  width: 26px;
-  animation-duration: 47s;
-  animation-delay: -18s;
-}
-
-.bat-3 {
-  top: 4px;
-  width: 22px;
-  animation-duration: 58s;
-  animation-delay: -40s;
-  animation-direction: reverse;
-}
-
-.bat-wing {
-  transform-box: fill-box;
-  animation: bat-flap 0.32s ease-in-out infinite alternate;
-}
-
-.bat-wing-l {
-  transform-origin: right center;
-}
-
-.bat-wing-r {
-  transform-origin: left center;
-}
-
-@keyframes bat-flap {
-  to {
-    transform: scaleY(-0.35);
-  }
-}
-
-/* Each bat crosses once per loop and rests off screen the rest of the time. */
-@keyframes bat-fly {
-  0% {
-    transform: translate(-10vw, 0);
-    opacity: 0;
-  }
-  4% {
-    opacity: 0.85;
-  }
-  15% {
-    transform: translate(40vw, -4vh);
-  }
-  28% {
-    transform: translate(110vw, 3vh);
-    opacity: 0.85;
-  }
-  29%,
-  100% {
-    transform: translate(110vw, 3vh);
-    opacity: 0;
-  }
-}
-
-.ember {
-  position: absolute;
-  bottom: -10px;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #fb923c;
-  box-shadow: 0 0 6px 1px rgb(251 146 60 / 0.6);
-  opacity: 0;
-  animation: ember-rise 22s linear infinite;
-}
-
-@keyframes ember-rise {
-  0% {
-    transform: translate(0, 0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.55;
-  }
-  50% {
-    transform: translate(18px, -50vh);
-  }
-  85% {
-    opacity: 0.25;
-  }
-  100% {
-    transform: translate(-10px, -105vh);
-    opacity: 0;
-  }
-}
-
-.spider {
-  position: absolute;
-  top: 0;
-  right: 7%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: spider-bob 9s ease-in-out infinite;
-}
-
-.spider-thread {
-  width: 1px;
-  height: 90px;
-  background: linear-gradient(rgb(247 239 230 / 0), rgb(247 239 230 / 0.25));
-}
-
-.spider svg {
-  width: 18px;
-  height: 18px;
-  fill: #3a2f27;
-  stroke: #3a2f27;
-}
-
-@keyframes spider-bob {
+@keyframes candle {
   0%,
   100% {
-    transform: translateY(-20px);
+    opacity: 1;
   }
-  50% {
-    transform: translateY(12px);
+  18% {
+    opacity: 0.82;
+  }
+  22% {
+    opacity: 0.95;
+  }
+  61% {
+    opacity: 0.78;
+  }
+  66% {
+    opacity: 1;
   }
 }
 
-@media (max-width: 767px) {
-  .spider,
-  .bat-3 {
-    display: none;
+/* The empty preview shows a ghost that drifts a few pixels up and down. */
+.empty-icon.is-ghost svg {
+  color: var(--accent);
+  animation: ghost-float 4s ease-in-out infinite;
+}
+
+@keyframes ghost-float {
+  50% {
+    transform: translateY(-3px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spooky *,
-  .spooky *::before {
-    animation: none !important;
-  }
-
-  .bat,
-  .ember {
-    display: none;
+  .wordmark .carve,
+  .empty-icon.is-ghost svg {
+    animation: none;
   }
 }
