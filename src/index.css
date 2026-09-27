@@ -1651,3 +1651,238 @@ input[role='switch']:checked::after {
   width: 30px;
   height: 30px;
 }
+
+/* Halloween theme (src/lib/season.ts). Beats the light and dark palettes. */
+
+:root[data-season='halloween'] {
+  --bg: #0e0b09;
+  --surface: #16120f;
+  --surface-2: #1f1915;
+  --border: #2a221c;
+  --border-strong: #3a2f27;
+  --text: #f7efe6;
+  --text-2: #b8a99b;
+  --text-3: #75685c;
+  --accent: #fb8a2e;
+  --accent-soft: rgb(251 138 46 / 0.14);
+  --primary: #f97316;
+  --primary-text: #170c04;
+  --ok: #86d97a;
+  --over: #f87171;
+  --warn: #fbbf24;
+  --warn-soft: rgb(251 191 36 / 0.12);
+  --checker: #1b1612;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px -14px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.season-toggle.is-on {
+  color: var(--accent);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+}
+
+.spooky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fog {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.5;
+}
+
+.fog-a {
+  left: -25vmax;
+  bottom: -35vmax;
+  background: radial-gradient(closest-side, rgb(249 115 22 / 0.14), transparent);
+  animation: fog-drift 70s ease-in-out infinite alternate;
+}
+
+.fog-b {
+  right: -30vmax;
+  top: -40vmax;
+  background: radial-gradient(closest-side, rgb(134 217 122 / 0.07), transparent);
+  animation: fog-drift 90s ease-in-out -30s infinite alternate-reverse;
+}
+
+@keyframes fog-drift {
+  to {
+    transform: translate(12vmax, -6vmax) scale(1.1);
+  }
+}
+
+.bat {
+  position: absolute;
+  left: 0;
+  width: 34px;
+  opacity: 0;
+  color: #0a0706;
+  animation: bat-fly 34s linear infinite;
+}
+
+.bat svg {
+  display: block;
+  fill: #5b4636;
+}
+
+.bat-1 {
+  top: 14px;
+}
+
+.bat-2 {
+  top: 34px;
+  width: 26px;
+  animation-duration: 47s;
+  animation-delay: -18s;
+}
+
+.bat-3 {
+  top: 4px;
+  width: 22px;
+  animation-duration: 58s;
+  animation-delay: -40s;
+  animation-direction: reverse;
+}
+
+.bat-wing {
+  transform-box: fill-box;
+  animation: bat-flap 0.32s ease-in-out infinite alternate;
+}
+
+.bat-wing-l {
+  transform-origin: right center;
+}
+
+.bat-wing-r {
+  transform-origin: left center;
+}
+
+@keyframes bat-flap {
+  to {
+    transform: scaleY(-0.35);
+  }
+}
+
+/* Each bat crosses once per loop and rests off screen the rest of the time. */
+@keyframes bat-fly {
+  0% {
+    transform: translate(-10vw, 0);
+    opacity: 0;
+  }
+  4% {
+    opacity: 0.85;
+  }
+  15% {
+    transform: translate(40vw, -4vh);
+  }
+  28% {
+    transform: translate(110vw, 3vh);
+    opacity: 0.85;
+  }
+  29%,
+  100% {
+    transform: translate(110vw, 3vh);
+    opacity: 0;
+  }
+}
+
+.ember {
+  position: absolute;
+  bottom: -10px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fb923c;
+  box-shadow: 0 0 6px 1px rgb(251 146 60 / 0.6);
+  opacity: 0;
+  animation: ember-rise 22s linear infinite;
+}
+
+@keyframes ember-rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(18px, -50vh);
+  }
+  85% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(-10px, -105vh);
+    opacity: 0;
+  }
+}
+
+.spider {
+  position: absolute;
+  top: 0;
+  right: 7%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: spider-bob 9s ease-in-out infinite;
+}
+
+.spider-thread {
+  width: 1px;
+  height: 90px;
+  background: linear-gradient(rgb(247 239 230 / 0), rgb(247 239 230 / 0.25));
+}
+
+.spider svg {
+  width: 18px;
+  height: 18px;
+  fill: #3a2f27;
+  stroke: #3a2f27;
+}
+
+@keyframes spider-bob {
+  0%,
+  100% {
+    transform: translateY(-20px);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+@media (max-width: 767px) {
+  .spider,
+  .bat-3 {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spooky *,
+  .spooky *::before {
+    animation: none !important;
+  }
+
+  .bat,
+  .ember {
+    display: none;
+  }
+}

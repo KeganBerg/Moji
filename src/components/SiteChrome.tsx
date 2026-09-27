@@ -1,8 +1,11 @@
+import { Ghost } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { setSeasonOff, useSeason } from '../lib/season'
 import { FEEDBACK_URL } from '../lib/site'
 
 /** The top bar. Children sit on the right, opposite the wordmark. */
 export function SiteHeader({ children }: { children?: ReactNode }) {
+  const season = useSeason()
   return (
     <header className="topbar">
       <a className="wordmark" href="/" aria-label="Moji Locker home">
@@ -14,7 +17,21 @@ export function SiteHeader({ children }: { children?: ReactNode }) {
         </svg>
         Moji Locker
       </a>
-      {children}
+      <div className="topbar-actions">
+        {season.inSeason && (
+          <button
+            type="button"
+            className={`icon-button season-toggle${season.on ? ' is-on' : ''}`}
+            onClick={() => setSeasonOff(season.on)}
+            aria-pressed={season.on}
+            aria-label="Halloween theme"
+            title={season.on ? 'Turn off the Halloween theme' : 'Turn on the Halloween theme'}
+          >
+            <Ghost size={17} />
+          </button>
+        )}
+        {children}
+      </div>
     </header>
   )
 }
