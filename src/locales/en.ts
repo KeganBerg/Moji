@@ -102,6 +102,22 @@ export const en = {
   saveFailed: "Couldn't save to the gallery. Your browser may be blocking storage.",
   deleteFailed: "Couldn't delete that emoji.",
 
+  // Errors
+  errNotSetUp: 'AI generation is not set up yet.',
+  errDescribe: 'Describe the emoji you want.',
+  errTooLong: 'Keep the description to {n} characters or fewer.',
+  errBlocked: "That description can't be generated. Try wording it differently.",
+  errLimit: "You've reached today's AI limit. Uploads still work.",
+  errLimitN: "You've used today's {n} AI generations. Uploads still work.",
+  errBusy: 'AI generation is busy for today. Try again tomorrow.',
+  errUnavailable: 'AI generation is unavailable right now. Uploads still work.',
+  errFailed: 'Generation failed. Try again.',
+  errOffline: 'Could not reach the generator. Check your connection.',
+  errNotImage: 'That file could not be read as an image.',
+  errExport: 'Export failed. Try again.',
+  errCanvas: "This browser can't edit images. Try another browser.",
+  errGeneric: 'Something went wrong. Try again.',
+
   // Gallery
   galleryIntro: 'Your saved emoji, kept on this device.',
   closeGallery: 'Close gallery',

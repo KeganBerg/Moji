@@ -39,6 +39,7 @@ import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 import { I18nProvider } from './components/I18nProvider'
 import { LANGUAGES, setLanguage, useI18n, type LangCode, type MessageKey } from './lib/i18n'
+import { errorText, toUiError, type UiError } from './lib/errors'
 
 interface HistoryItem {
   id: number
@@ -120,7 +121,7 @@ function Editor() {
   const [name, setName] = useState('')
 
   const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<UiError | null>(null)
 
   const [gallery, setGallery] = useState<GalleryItem[]>([])
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -223,7 +224,7 @@ function Editor() {
       try {
         await addImage(file, file.name.replace(/\.[^.]+$/, ''), true)
       } catch (e) {
-        setError((e as Error).message)
+        setError(toUiError(e))
       }
     },
     [addImage],
@@ -242,7 +243,7 @@ function Editor() {
       if (out.remaining !== null) setRemaining(out.remaining)
       await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false)
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') setError((e as Error).message)
+      if ((e as Error).name !== 'AbortError') setError(toUiError(e))
     } finally {
       if (abortRef.current === controller) setGenerating(false)
     }
@@ -286,7 +287,7 @@ function Editor() {
             : await exportPng(source, platform.size, options, platform)
         if (!cancelled) setExported({ key: exportKey, result: out })
       } catch (e) {
-        if (!cancelled) setError((e as Error).message)
+        if (!cancelled) setError(toUiError(e))
       }
     }, 200)
     return () => {
@@ -315,7 +316,7 @@ function Editor() {
       setGallery((g) => [item, ...g])
       setSavedResult(result)
     } catch {
-      setError(t('saveFailed'))
+      setError({ key: 'saveFailed' })
     }
   }
 
@@ -330,7 +331,7 @@ function Editor() {
       await deleteFromGallery(item.id)
       setGallery((g) => g.filter((i) => i.id !== item.id))
     } catch {
-      setError(t('deleteFailed'))
+      setError({ key: 'deleteFailed' })
     }
   }
 
@@ -819,7 +820,7 @@ function Editor() {
 
       {error && (
         <div className="toast" role="alert">
-          {error}
+          {errorText(error, t, lang)}
           <button type="button" onClick={() => setError(null)} aria-label={t('dismiss')}>
             ×
           </button>
@@ -839,7 +840,7 @@ function Editor() {
         onDownload={(item) => downloadBlob(item.blob, `${item.name}.${item.extension}`)}
         onEdit={(item) => {
           setGalleryOpen(false)
-          addImage(item.blob, item.name, false).catch((e) => setError((e as Error).message))
+          addImage(item.blob, item.name, false).catch((e) => setError(toUiError(e)))
         }}
         onDelete={deleteSaved}
       />
