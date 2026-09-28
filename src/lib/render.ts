@@ -242,7 +242,16 @@ export function drawFrame(
     roundedRect(ctx, -dw / 2, -dh / 2, dw, dh, (corners * Math.min(dw, dh)) / 2)
     ctx.clip()
   }
-  const image = transform.hue === undefined ? source : tinted(source, transform.hue, transform.tint ?? TINT_STRENGTH)
+  let image: Canvas2D = source
+  if (transform.hue !== undefined) {
+    // Tint a copy only as big as it lands on screen: a 36 px thumbnail
+    // shouldn't wash a full-size upload every frame.
+    const m = ctx.getTransform()
+    const scale = Math.hypot(m.a, m.b)
+    const w = Math.min(source.width, Math.max(1, Math.ceil(dw * scale)))
+    const h = Math.min(source.height, Math.max(1, Math.ceil(dh * scale)))
+    image = tinted(source, w, h, transform.hue, transform.tint ?? TINT_STRENGTH)
+  }
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh)
@@ -256,12 +265,12 @@ let tintCanvas: Canvas2D | null = null
  * rotation) also colors black, white and grey images, and it doesn't rely on
  * canvas filters, which some browsers ignore.
  */
-function tinted(source: Canvas2D, hue: number, strength: number): Canvas2D {
+function tinted(source: Canvas2D, width: number, height: number, hue: number, strength: number): Canvas2D {
   tintCanvas ??= makeCanvas(1, 1)
   const c = tintCanvas
-  if (c.width !== source.width || c.height !== source.height) {
-    c.width = source.width
-    c.height = source.height
+  if (c.width !== width || c.height !== height) {
+    c.width = width
+    c.height = height
   }
   // A plain context: willReadFrequently would force slow software drawing every frame.
   const t = c.getContext('2d')
@@ -269,7 +278,9 @@ function tinted(source: Canvas2D, hue: number, strength: number): Canvas2D {
   t.globalCompositeOperation = 'source-over'
   t.globalAlpha = 1
   t.clearRect(0, 0, c.width, c.height)
-  t.drawImage(source, 0, 0)
+  t.imageSmoothingEnabled = true
+  t.imageSmoothingQuality = 'high'
+  t.drawImage(source, 0, 0, c.width, c.height)
   t.globalCompositeOperation = 'source-atop'
   t.globalAlpha = strength
   t.fillStyle = `hsl(${Math.round(((hue % 360) + 360) % 360)}, 100%, 55%)`

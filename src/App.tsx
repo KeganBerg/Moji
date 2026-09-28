@@ -62,6 +62,7 @@ import {
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 import { I18nProvider } from './components/I18nProvider'
 import { NumberField } from './components/NumberField'
+import { useFitLabels } from './lib/fitText'
 import { LANGUAGES, setLanguage, useI18n, type LangCode, type MessageKey } from './lib/i18n'
 import { errorText, toUiError, type UiError } from './lib/errors'
 
@@ -179,6 +180,9 @@ function Editor() {
     () => ANIMATIONS.map((a) => withSpeed(withIntensity(a, intensity), speed)),
     [speed, intensity],
   )
+  const motionsRef = useRef<HTMLDivElement>(null)
+  // Active labels are bolder, so they refit when the selection changes.
+  useFitLabels(motionsRef, '.motion > span:last-child', `${lang}|${platform.staticOnly}|${motionIds.join()}`)
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
@@ -720,7 +724,7 @@ function Editor() {
               </div>
               {/* Instagram stickers are stills, so there's nothing to pick. */}
               {!platform.staticOnly && (
-                <div className="motions" role="group" aria-label={t('motion')}>
+                <div className="motions" ref={motionsRef} role="group" aria-label={t('motion')}>
                   {motionThumbs.map((a) => {
                     const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
                     return (

@@ -1949,6 +1949,9 @@ input[role='switch']:checked::after {
 .motion > span:last-child {
   max-width: 100%;
   min-width: 0;
+  /* Whole words only: useFitLabels shrinks the font until the longest fits. */
+  overflow-wrap: normal;
+  hyphens: manual;
 }
 
 .motion {
