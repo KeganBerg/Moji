@@ -776,17 +776,18 @@ function Editor() {
                 />
               </div>
               <label className="setting">
-                <span>{t('padding')}</span>
+                <span>{t('scale')}</span>
+                {/* Shown as how much of the frame the emoji fills; stored as padding on each side. */}
                 <input
                   type="range"
-                  min={0}
-                  max={0.3}
+                  min={0.4}
+                  max={1}
                   step={0.01}
-                  value={padding}
-                  onChange={(e) => setPadding(Number(e.target.value))}
-                  aria-valuetext={`${Math.round(padding * 100)}%`}
+                  value={1 - padding * 2}
+                  onChange={(e) => setPadding(Math.round((1 - Number(e.target.value)) * 50) / 100)}
+                  aria-valuetext={`${Math.round((1 - padding * 2) * 100)}%`}
                 />
-                <output aria-hidden>{Math.round(padding * 100)}%</output>
+                <output aria-hidden>{Math.round((1 - padding * 2) * 100)}%</output>
               </label>
               <label className="setting">
                 <span>{t('corners')}</span>

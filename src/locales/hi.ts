@@ -72,7 +72,7 @@ const hi: Messages = {
   framing: 'फ़्रेमिंग',
   fit: 'फ़िट',
   fill: 'फ़िल',
-  padding: 'पैडिंग',
+  scale: 'स्केल',
   corners: 'कोने',
   rotate: 'घुमाव',
   turn: 'घुमाएं/पलटें',

@@ -74,7 +74,7 @@ export const en = {
   framing: 'Framing',
   fit: 'Fit',
   fill: 'Fill',
-  padding: 'Padding',
+  scale: 'Scale',
   corners: 'Corners',
   rotate: 'Rotate',
   turn: 'Turn',

@@ -72,7 +72,7 @@ const fr: Messages = {
   framing: 'Cadrage',
   fit: 'Adapter',
   fill: 'Remplir',
-  padding: 'Marge',
+  scale: 'Échelle',
   corners: 'Coins',
   rotate: 'Rotation',
   turn: 'Pivoter',

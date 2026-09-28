@@ -72,7 +72,7 @@ const ko: Messages = {
   framing: '프레이밍',
   fit: '맞추기',
   fill: '채우기',
-  padding: '여백',
+  scale: '배율',
   corners: '모서리',
   rotate: '회전',
   turn: '방향',

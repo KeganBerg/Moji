@@ -72,7 +72,7 @@ const es: Messages = {
   framing: 'Encuadre',
   fit: 'Encajar',
   fill: 'Rellenar',
-  padding: 'Margen',
+  scale: 'Escala',
   corners: 'Esquinas',
   rotate: 'Rotación',
   turn: 'Girar',

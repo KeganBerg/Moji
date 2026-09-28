@@ -72,7 +72,7 @@ const ja: Messages = {
   framing: 'フレーミング',
   fit: '全体を表示',
   fill: '枠いっぱい',
-  padding: '余白',
+  scale: '拡大率',
   corners: '角丸',
   rotate: '回転',
   turn: '向き',

@@ -72,7 +72,7 @@ const ar: Messages = {
   framing: 'التأطير',
   fit: 'احتواء',
   fill: 'ملء',
-  padding: 'الهامش',
+  scale: 'التحجيم',
   corners: 'الزوايا',
   rotate: 'تدوير',
   turn: 'الاتجاه',
