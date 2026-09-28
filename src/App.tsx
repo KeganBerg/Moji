@@ -1,6 +1,9 @@
 import {
   ArrowUp,
+  Check,
+  Copy,
   Download,
+  ExternalLink,
   FlipHorizontal2,
   Hash,
   Ghost,
@@ -143,7 +146,11 @@ function Editor() {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
-  const animation = useMemo(() => composeAnimations(motionIds.map(getAnimation)), [motionIds])
+  // Instagram stickers don't animate, so that preset previews and exports a still.
+  const animation = useMemo(
+    () => (platform.staticOnly ? getAnimation('none') : composeAnimations(motionIds.map(getAnimation))),
+    [motionIds, platform.staticOnly],
+  )
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
@@ -365,6 +372,33 @@ function Editor() {
     if (wanted) downloadRef.current()
   }, [result, source])
 
+  // Instagram: copy the PNG so it can be pasted into a Story as a sticker.
+  const canCopy = typeof window !== 'undefined' && 'ClipboardItem' in window && !!navigator.clipboard?.write
+  const [copiedResult, setCopiedResult] = useState<ExportResult | null>(null)
+  const copySticker = async () => {
+    if (!result) return
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [result.blob.type]: result.blob })])
+      setCopiedResult(result)
+    } catch {
+      setError({ key: 'copyFailed' })
+    }
+  }
+  // GIPHY: its upload page takes a file, so hand over the sticker and open it.
+  const postToGiphy = () => {
+    if (!result) return
+    window.open('https://giphy.com/upload', '_blank', 'noopener')
+    download()
+  }
+  // What GIPHY would reject: a still image, or a solid background.
+  const stickerIssue = platform.stickerRules
+    ? animation.frames < 2
+      ? t('giphyNeedsMotion')
+      : background !== null
+        ? t('giphyNeedsClear')
+        : null
+    : null
+
   const deleteSaved = async (item: GalleryItem) => {
     try {
       await deleteFromGallery(item.id)
@@ -376,16 +410,13 @@ function Editor() {
 
   const specLine = [
     `${platform.size}×${platform.size}`,
-    t('specUnder', { size: formatBytes(platform.maxBytes) }),
-    platform.maxFrames < 200 ? t('specFrames', { n: platform.maxFrames }) : null,
+    t('specUnder', { size: isolate(formatBytes(platform.maxBytes)) }),
+    platform.maxFrames > 1 && platform.maxFrames < 200 ? t('specFrames', { n: platform.maxFrames }) : null,
   ]
     .filter(Boolean)
     .join(' · ')
 
-  const platformOptions = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
-    value: id,
-    label: id === 'custom' ? t('custom') : PLATFORMS[id].label,
-  }))
+  const platformOption = (id: PlatformId) => ({ value: id, label: id === 'custom' ? t('custom') : PLATFORMS[id].label })
   const motionLabel = motionIds.map((id) => t(motionKey(id))).join(' + ')
 
   return (
@@ -439,7 +470,13 @@ function Editor() {
         >
           <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
             {source ? (
-              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} label={t('emojiPreview')} />
+              <EmojiCanvas
+                source={source}
+                animation={animation}
+                options={options}
+                size={previewSize}
+                label={t('emojiPreview')}
+              />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
                 <span className={`empty-icon${season.on ? ' is-ghost' : ''}`}>
@@ -585,12 +622,27 @@ function Editor() {
           <section className="inspector" aria-label={t('settings')}>
             <div className="group">
               <h2>{t('destination')}</h2>
-              <Segmented
-                label={t('destination')}
-                options={platformOptions}
-                value={platformId}
-                onChange={setPlatformId}
-              />
+              {/* Two rows so every name fits: custom emoji apps, then sticker apps. */}
+              <div className="setting">
+                <span>{t('emoji')}</span>
+                <Segmented
+                  label={t('emoji')}
+                  size="sm"
+                  options={(['slack', 'discord', 'custom'] as const).map(platformOption)}
+                  value={platformId}
+                  onChange={setPlatformId}
+                />
+              </div>
+              <div className="setting">
+                <span>{t('stickers')}</span>
+                <Segmented
+                  label={t('stickers')}
+                  size="sm"
+                  options={(['giphy', 'instagram'] as const).map(platformOption)}
+                  value={platformId}
+                  onChange={setPlatformId}
+                />
+              </div>
               {platformId === 'custom' ? (
                 <div className="field-row">
                   <label className="field">
@@ -616,7 +668,13 @@ function Editor() {
             <div className="group">
               <div className="group-head">
                 <h2>{t('motion')}</h2>
-                <span className="hint">{motionIds.length > 1 ? motionLabel : t('motionHint')}</span>
+                <span className="hint">
+                  {platform.staticOnly
+                    ? t('motionStill', { platform: platform.label })
+                    : motionIds.length > 1
+                      ? motionLabel
+                      : t('motionHint')}
+                </span>
               </div>
               <div className="motions" role="group" aria-label={t('motion')}>
                 {ANIMATIONS.map((a) => {
@@ -836,12 +894,16 @@ function Editor() {
                     <span>
                       {result.withinLimit ? t('ready') : t('overLimit')} ·{' '}
                       {isolate(`${result.size}×${result.size} ${result.extension.toUpperCase()}`)} ·{' '}
-                      {t('sizeOf', { size: isolate(formatBytes(result.bytes)), max: isolate(formatBytes(platform.maxBytes)) })}
+                      {t('sizeOf', {
+                        size: isolate(formatBytes(result.bytes)),
+                        max: isolate(formatBytes(platform.maxBytes)),
+                      })}
                     </span>
                   </>
                 )}
               </div>
               {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
+              {stickerIssue && <p className="hint is-warning">{stickerIssue}</p>}
 
               <button type="button" className="primary" onClick={download} disabled={!source}>
                 <Download size={16} aria-hidden />
@@ -859,7 +921,27 @@ function Editor() {
                   />
                   {t('saveEveryDownload')}
                 </label>
+                {platform.id === 'instagram' && canCopy && (
+                  <button type="button" className="text-button share-button" onClick={copySticker} disabled={!result}>
+                    {copiedResult && copiedResult === result ? (
+                      <Check size={14} aria-hidden />
+                    ) : (
+                      <Copy size={14} aria-hidden />
+                    )}
+                    {copiedResult && copiedResult === result ? t('stickerCopied') : t('copySticker')}
+                  </button>
+                )}
+                {platform.id === 'giphy' && (
+                  <button type="button" className="text-button share-button" onClick={postToGiphy} disabled={!result}>
+                    <ExternalLink size={14} aria-hidden />
+                    {t('postToGiphy')}
+                  </button>
+                )}
               </div>
+              {platform.id === 'instagram' && (
+                <p className="hint">{t(canCopy ? 'instagramHint' : 'instagramSaveHint')}</p>
+              )}
+              {platform.id === 'giphy' && <p className="hint">{t('giphyHint')}</p>}
             </div>
           </section>
         </div>
