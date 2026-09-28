@@ -48,6 +48,7 @@ const ar: Messages = {
   specFrames: 'الحد الأقصى لإطارات GIF: {n}',
   motion: 'الحركة',
   motionHint: 'اختر حركة واحدة أو اجمع بين عدة حركات',
+  speed: 'السرعة',
   motionNone: 'ثابت',
   motionSpin: 'دوران',
   motionBounce: 'قفز',

@@ -48,6 +48,7 @@ const de: Messages = {
   specFrames: 'GIF bis zu {n} Frames',
   motion: 'Bewegung',
   motionHint: 'Eine wählen oder mehrere kombinieren',
+  speed: 'Tempo',
   motionNone: 'Statisch',
   motionSpin: 'Rotieren',
   motionBounce: 'Hüpfen',

@@ -1988,3 +1988,8 @@ html[data-paused] .motion-dot {
     margin-inline-end: auto;
   }
 }
+
+/* Fits "0.25×" so the slider doesn't shift as the value changes. */
+.setting.speed output {
+  min-width: 40px;
+}

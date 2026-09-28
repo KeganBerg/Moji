@@ -48,6 +48,7 @@ const ru: Messages = {
   specFrames: 'Кадров в GIF: до {n}',
   motion: 'Анимация',
   motionHint: 'Выберите одну или совместите несколько',
+  speed: 'Скорость',
   motionNone: 'Статика',
   motionSpin: 'Вращение',
   motionBounce: 'Прыжки',
