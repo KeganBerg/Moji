@@ -12,6 +12,8 @@ export interface FrameTransform {
   y?: number
   /** Party color, as a hue in degrees. Undefined means the image keeps its own colors. */
   hue?: number
+  /** How strongly the Party color washes over the image, 0 to 1. */
+  tint?: number
 }
 
 export interface Animation {
@@ -91,7 +93,7 @@ export const ANIMATIONS: Animation[] = [
     duration: 1000,
     frames: 20,
     inset: 1,
-    at: (t) => ({ hue: t * 360 }),
+    at: (t) => ({ hue: t * 360, tint: 0.5 }),
   },
   {
     id: 'float',
@@ -207,6 +209,7 @@ export function composeAnimations(list: Animation[]): Animation {
         scaleY = 1,
         x = 0,
         y = 0
+      let tint: number | undefined
       // Only color-cycling motions set hue, so "no hue" stays distinguishable from 0°.
       let hue: number | undefined
       for (const { a, cycles } of parts) {
@@ -217,8 +220,9 @@ export function composeAnimations(list: Animation[]): Animation {
         x += f.x ?? 0
         y += f.y ?? 0
         if (f.hue !== undefined) hue = (hue ?? 0) + f.hue
+        if (f.tint !== undefined) tint = Math.max(tint ?? 0, f.tint)
       }
-      return { rotate, scaleX, scaleY, x, y, hue }
+      return { rotate, scaleX, scaleY, x, y, hue, tint }
     },
   }
 }
@@ -240,4 +244,37 @@ export function withSpeed(anim: Animation, speed: number): Animation {
   frames = Math.max(2, frames - (frames % 2))
   const delay = Math.max(20, Math.round(target / frames / 10) * 10)
   return { ...anim, duration: delay * frames, frames }
+}
+
+export const INTENSITY = { min: 0.25, max: 2, step: 0.25, default: 1 }
+
+/** Motions built from whole turns, which would break the loop if scaled. */
+const WHOLE_TURNS = new Set(['spin', 'flip'])
+
+/**
+ * Makes a motion gentler or stronger: offsets, rotation and stretch scale by
+ * `amount`, and Party's color wash gets lighter or heavier. The inset grows
+ * with the motion so it still stays inside the canvas.
+ */
+export function withIntensity(anim: Animation, amount: number): Animation {
+  if (anim.frames <= 1 || amount === 1) return anim
+  const turns = WHOLE_TURNS.has(anim.id)
+  return {
+    ...anim,
+    inset: turns ? anim.inset : Math.max(0.5, 1 - (1 - anim.inset) * amount),
+    at: (t) => {
+      const f = anim.at(t)
+      if (turns) return f
+      const stretch = (s: number | undefined) => (s === undefined ? undefined : 1 + (s - 1) * amount)
+      return {
+        rotate: f.rotate === undefined ? undefined : f.rotate * amount,
+        scaleX: stretch(f.scaleX),
+        scaleY: stretch(f.scaleY),
+        x: f.x === undefined ? undefined : f.x * amount,
+        y: f.y === undefined ? undefined : f.y * amount,
+        hue: f.hue,
+        tint: f.tint === undefined ? undefined : Math.min(0.8, f.tint * amount),
+      }
+    },
+  }
 }

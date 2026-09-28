@@ -825,6 +825,23 @@ input[type='range'] {
   color: var(--text);
 }
 
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-weight: 550;
+}
+
+.share-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hint.is-warning {
+  color: var(--warn);
+}
+
 .swatch {
   position: relative;
   width: 28px;
@@ -1468,6 +1485,11 @@ input[role='switch']:checked::after {
 
   .group.export .hint {
     display: none;
+  }
+
+  /* Unless GIPHY would reject the sticker as it is. */
+  .group.export .hint.is-warning {
+    display: block;
   }
 }
 

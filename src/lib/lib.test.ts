@@ -27,9 +27,15 @@ describe('platform presets', () => {
     expect(PLATFORMS.slack).toMatchObject({ size: 128, maxBytes: 131072, maxFrames: 50 })
     expect(PLATFORMS.discord).toMatchObject({ size: 128, maxBytes: 262144 })
   })
+  it('exports GIPHY stickers as animated GIFs and Instagram stickers as large stills', () => {
+    expect(PLATFORMS.giphy).toMatchObject({ size: 480, stickerRules: true })
+    expect(PLATFORMS.giphy.size % 4).toBe(0)
+    expect(PLATFORMS.instagram).toMatchObject({ size: 1024, staticOnly: true })
+  })
   it('formats bytes', () => {
     expect(formatBytes(512)).toBe('512\u00a0B')
     expect(formatBytes(131072)).toBe('128\u00a0KB')
+    expect(formatBytes(8 * 1024 * 1024)).toBe('8\u00a0MB')
   })
 })
 
@@ -304,5 +310,18 @@ describe('pageFor', () => {
     expect(pageFor('//faq')).toBe('faq')
     expect(pageFor('/guides/nope')).toBe(NOT_FOUND)
     expect(pageFor('/does-not-exist')).toBe(NOT_FOUND)
+  })
+})
+
+describe('motion intensity', () => {
+  it('scales the Party wash and motion size', async () => {
+    const { withIntensity } = await import('./animations')
+    expect(withIntensity(getAnimation('party'), 0.5).at(0).tint).toBe(0.25)
+    expect(withIntensity(getAnimation('party'), 2).at(0).tint).toBe(0.8)
+    const wiggle = getAnimation('wiggle')
+    expect(withIntensity(wiggle, 2).at(0.25).rotate).toBeCloseTo(wiggle.at(0.25).rotate! * 2)
+    expect(withIntensity(wiggle, 2).inset).toBeLessThan(wiggle.inset)
+    // Spin keeps its full turn so the loop stays seamless.
+    expect(withIntensity(getAnimation('spin'), 0.5).at(0.5).rotate).toBeCloseTo(Math.PI)
   })
 })

@@ -1,6 +1,9 @@
 import {
   ArrowUp,
+  Check,
+  Copy,
   Download,
+  ExternalLink,
   FlipHorizontal2,
   Hash,
   Ghost,
@@ -26,11 +29,13 @@ import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
 import {
   ANIMATIONS,
+  INTENSITY,
   SPEED,
   SPIN_DIRECTIONS,
   composeAnimations,
   getAnimation,
   stepped,
+  withIntensity,
   withSpeed,
   withSpinDirection,
   type Animation,
@@ -128,6 +133,7 @@ function Editor() {
   // Picked motions stack (e.g. Party + Bounce); an empty list means static.
   const [motionIds, setMotionIds] = useState<string[]>([])
   const [speed, setSpeed] = useState(SPEED.default)
+  const [intensity, setIntensity] = useState(INTENSITY.default)
   const [spinDirection, setSpinDirection] = useState<SpinDirection>('cw')
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
@@ -135,6 +141,7 @@ function Editor() {
   const [trim, setTrim] = useState(true)
   const [rotation, setRotation] = useState(0)
   const [flip, setFlip] = useState(false)
+  const [corners, setCorners] = useState(DEFAULT_RENDER.corners)
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
@@ -157,25 +164,33 @@ function Editor() {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
+  // Instagram stickers don't animate, so that preset previews and exports a still.
   const animation = useMemo(
     () =>
-      withSpeed(composeAnimations(motionIds.map((id) => withSpinDirection(getAnimation(id), spinDirection))), speed),
-    [motionIds, speed, spinDirection],
+      platform.staticOnly
+        ? getAnimation('none')
+        : withSpeed(
+            composeAnimations(
+              motionIds.map((id) => withIntensity(withSpinDirection(getAnimation(id), spinDirection), intensity)),
+            ),
+            speed,
+          ),
+    [motionIds, speed, intensity, spinDirection, platform.staticOnly],
   )
-  // The motion picker's thumbnails play at the chosen speed and spin direction too, frame for frame.
+  // The motion picker's thumbnails play at the chosen speed, intensity and spin direction too, frame for frame.
   const motionThumbs = useMemo(
     () =>
       ANIMATIONS.map((a) => {
-        const anim = withSpeed(withSpinDirection(a, spinDirection), speed)
+        const anim = withSpeed(withIntensity(withSpinDirection(a, spinDirection), intensity), speed)
         return stepped(anim, anim.frames)
       }),
-    [speed, spinDirection],
+    [speed, intensity, spinDirection],
   )
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
-    () => ({ fit, padding, background, rotation, flip }),
-    [fit, padding, background, rotation, flip],
+    () => ({ fit, padding, background, rotation, flip, corners }),
+    [fit, padding, background, rotation, flip, corners],
   )
   const prepared = useMemo(
     () => (active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null) : null),
@@ -191,6 +206,7 @@ function Editor() {
     !trim ||
     rotation !== 0 ||
     flip ||
+    corners !== DEFAULT_RENDER.corners ||
     (!!active && (active.cutout !== active.cutoutDefault || active.cutoutStrength !== DEFAULT_STRENGTH))
   const resetAdjust = () => {
     setFit(DEFAULT_RENDER.fit)
@@ -199,6 +215,7 @@ function Editor() {
     setTrim(true)
     setRotation(0)
     setFlip(false)
+    setCorners(DEFAULT_RENDER.corners)
     if (active) updateActive({ cutout: active.cutoutDefault, cutoutStrength: DEFAULT_STRENGTH })
   }
   // Back to the empty editor, as if the page had just loaded. The destination stays.
@@ -211,6 +228,7 @@ function Editor() {
     setName('')
     setMotionIds([])
     setSpeed(SPEED.default)
+    setIntensity(INTENSITY.default)
     setSpinDirection('cw')
     setTune(DEFAULT_TUNE)
     setError(null)
@@ -399,6 +417,33 @@ function Editor() {
     if (wanted) downloadRef.current()
   }, [result, source])
 
+  // Instagram: copy the PNG so it can be pasted into a Story as a sticker.
+  const canCopy = typeof window !== 'undefined' && 'ClipboardItem' in window && !!navigator.clipboard?.write
+  const [copiedResult, setCopiedResult] = useState<ExportResult | null>(null)
+  const copySticker = async () => {
+    if (!result) return
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [result.blob.type]: result.blob })])
+      setCopiedResult(result)
+    } catch {
+      setError({ key: 'copyFailed' })
+    }
+  }
+  // GIPHY: its upload page takes a file, so hand over the sticker and open it.
+  const postToGiphy = () => {
+    if (!result) return
+    window.open('https://giphy.com/upload', '_blank', 'noopener')
+    download()
+  }
+  // What GIPHY would reject: a still image, or a solid background.
+  const stickerIssue = platform.stickerRules
+    ? animation.frames < 2
+      ? t('giphyNeedsMotion')
+      : background !== null
+        ? t('giphyNeedsClear')
+        : null
+    : null
+
   const deleteSaved = async (item: GalleryItem) => {
     try {
       await deleteFromGallery(item.id)
@@ -410,16 +455,13 @@ function Editor() {
 
   const specLine = [
     `${platform.size}×${platform.size}`,
-    t('specUnder', { size: formatBytes(platform.maxBytes) }),
-    platform.maxFrames < 200 ? t('specFrames', { n: platform.maxFrames }) : null,
+    t('specUnder', { size: isolate(formatBytes(platform.maxBytes)) }),
+    platform.maxFrames > 1 && platform.maxFrames < 200 ? t('specFrames', { n: platform.maxFrames }) : null,
   ]
     .filter(Boolean)
     .join(' · ')
 
-  const platformOptions = (Object.keys(PLATFORMS) as PlatformId[]).map((id) => ({
-    value: id,
-    label: id === 'custom' ? t('custom') : PLATFORMS[id].label,
-  }))
+  const platformOption = (id: PlatformId) => ({ value: id, label: id === 'custom' ? t('custom') : PLATFORMS[id].label })
   const motionLabel = motionIds.map((id) => t(motionKey(id))).join(' + ')
 
   return (
@@ -625,12 +667,27 @@ function Editor() {
           <section className="inspector" aria-label={t('settings')}>
             <div className="group">
               <h2>{t('destination')}</h2>
-              <Segmented
-                label={t('destination')}
-                options={platformOptions}
-                value={platformId}
-                onChange={setPlatformId}
-              />
+              {/* Two rows so every name fits: custom emoji apps, then sticker apps. */}
+              <div className="setting">
+                <span>{t('emoji')}</span>
+                <Segmented
+                  label={t('emoji')}
+                  size="sm"
+                  options={(['slack', 'discord', 'custom'] as const).map(platformOption)}
+                  value={platformId}
+                  onChange={setPlatformId}
+                />
+              </div>
+              <div className="setting">
+                <span>{t('stickers')}</span>
+                <Segmented
+                  label={t('stickers')}
+                  size="sm"
+                  options={(['giphy', 'instagram'] as const).map(platformOption)}
+                  value={platformId}
+                  onChange={setPlatformId}
+                />
+              </div>
               {platformId === 'custom' ? (
                 <div className="field-row">
                   <label className="field">
@@ -656,7 +713,13 @@ function Editor() {
             <div className="group">
               <div className="group-head">
                 <h2>{t('motion')}</h2>
-                <span className="hint">{motionIds.length > 1 ? motionLabel : t('motionHint')}</span>
+                <span className="hint">
+                  {platform.staticOnly
+                    ? t('motionStill', { platform: platform.label })
+                    : motionIds.length > 1
+                      ? motionLabel
+                      : t('motionHint')}
+                </span>
               </div>
               <div className="motions" role="group" aria-label={t('motion')}>
                 {motionThumbs.map((a) => {
@@ -707,6 +770,22 @@ function Editor() {
                     aria-valuetext={`${speed}×`}
                   />
                   <output aria-hidden>{speed}×</output>
+                </label>
+              )}
+              {motionIds.length > 0 && (
+                <label className="setting speed">
+                  <span>{t('intensity')}</span>
+                  <input
+                    type="range"
+                    min={INTENSITY.min}
+                    max={INTENSITY.max}
+                    step={INTENSITY.step}
+                    value={intensity}
+                    onChange={(e) => setIntensity(Number(e.target.value))}
+                    onDoubleClick={() => setIntensity(INTENSITY.default)}
+                    aria-valuetext={`${Math.round(intensity * 100)}%`}
+                  />
+                  <output aria-hidden>{Math.round(intensity * 100)}%</output>
                 </label>
               )}
             </div>
@@ -762,17 +841,32 @@ function Editor() {
                 />
               </div>
               <label className="setting">
-                <span>{t('padding')}</span>
+                <span>{t('scale')}</span>
+                {/* Shown as how much of the frame the emoji fills; stored as padding on each side. */}
+                <input
+                  type="range"
+                  min={0.4}
+                  max={1}
+                  step={0.01}
+                  value={1 - padding * 2}
+                  onChange={(e) => setPadding(Math.round((1 - Number(e.target.value)) * 50) / 100)}
+                  aria-valuetext={`${Math.round((1 - padding * 2) * 100)}%`}
+                />
+                <output aria-hidden>{Math.round((1 - padding * 2) * 100)}%</output>
+              </label>
+              <label className="setting">
+                <span>{t('corners')}</span>
                 <input
                   type="range"
                   min={0}
-                  max={0.3}
+                  max={1}
                   step={0.01}
-                  value={padding}
-                  onChange={(e) => setPadding(Number(e.target.value))}
-                  aria-valuetext={`${Math.round(padding * 100)}%`}
+                  value={corners}
+                  onChange={(e) => setCorners(Number(e.target.value))}
+                  onDoubleClick={() => setCorners(DEFAULT_RENDER.corners)}
+                  aria-valuetext={`${Math.round(corners * 100)}%`}
                 />
-                <output aria-hidden>{Math.round(padding * 100)}%</output>
+                <output aria-hidden>{Math.round(corners * 100)}%</output>
               </label>
               <label className="setting">
                 <span>{t('rotate')}</span>
@@ -913,6 +1007,7 @@ function Editor() {
                 )}
               </div>
               {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
+              {stickerIssue && <p className="hint is-warning">{stickerIssue}</p>}
 
               <button type="button" className="primary" onClick={download} disabled={!source}>
                 <Download size={16} aria-hidden />
@@ -930,7 +1025,27 @@ function Editor() {
                   />
                   {t('saveEveryDownload')}
                 </label>
+                {platform.id === 'instagram' && canCopy && (
+                  <button type="button" className="text-button share-button" onClick={copySticker} disabled={!result}>
+                    {copiedResult && copiedResult === result ? (
+                      <Check size={14} aria-hidden />
+                    ) : (
+                      <Copy size={14} aria-hidden />
+                    )}
+                    {copiedResult && copiedResult === result ? t('stickerCopied') : t('copySticker')}
+                  </button>
+                )}
+                {platform.id === 'giphy' && (
+                  <button type="button" className="text-button share-button" onClick={postToGiphy} disabled={!result}>
+                    <ExternalLink size={14} aria-hidden />
+                    {t('postToGiphy')}
+                  </button>
+                )}
               </div>
+              {platform.id === 'instagram' && (
+                <p className="hint">{t(canCopy ? 'instagramHint' : 'instagramSaveHint')}</p>
+              )}
+              {platform.id === 'giphy' && <p className="hint">{t('giphyHint')}</p>}
             </div>
           </section>
         </div>

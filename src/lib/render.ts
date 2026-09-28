@@ -13,6 +13,8 @@ export interface RenderOptions {
   rotation: number
   /** Mirror the image left to right. */
   flip: boolean
+  /** Corner rounding as a share of half the shorter side, 0 (square) to 1 (fully round). */
+  corners: number
 }
 
 export const DEFAULT_RENDER: RenderOptions = {
@@ -21,6 +23,25 @@ export const DEFAULT_RENDER: RenderOptions = {
   background: null,
   rotation: 0,
   flip: false,
+  corners: 0,
+}
+
+/** Adds a rounded rectangle path. ctx.roundRect is missing in older Safari and Firefox. */
+export function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  r = Math.max(0, Math.min(r, w / 2, h / 2))
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
 }
 
 /** Size of the box a w × h image occupies once rotated by the given degrees. */
@@ -154,11 +175,21 @@ export function drawFrame(
   ctx.save()
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, size, size)
+  const avail = size * (1 - opts.padding * 2) * inset
+  const corners = Math.max(0, Math.min(1, opts.corners ?? 0))
+  // With a fill color or Fill framing the emoji reads as a tile, so the tile
+  // gets the rounded corners. Otherwise the image itself is rounded below.
+  const roundTile = corners > 0 && (opts.background !== null || opts.fit === 'cover')
+  if (roundTile) {
+    const o = (size - avail) / 2
+    ctx.beginPath()
+    roundedRect(ctx, o, o, avail, avail, (corners * avail) / 2)
+    ctx.clip()
+  }
   if (opts.background) {
     ctx.fillStyle = opts.background
     ctx.fillRect(0, 0, size, size)
   }
-  const avail = size * (1 - opts.padding * 2) * inset
   // Fit: the whole rotated image stays inside the frame, so turning it never
   // crops a corner. Fill: the rotated image still covers the whole frame, so
   // turning it never leaves empty corners.
@@ -171,7 +202,7 @@ export function drawFrame(
   const dw = source.width * fitScale
   const dh = source.height * fitScale
 
-  if (opts.fit === 'cover') {
+  if (opts.fit === 'cover' && !roundTile) {
     ctx.beginPath()
     const o = (size - avail) / 2
     ctx.rect(o, o, avail, avail)
@@ -182,7 +213,13 @@ export function drawFrame(
   ctx.scale(transform.scaleX ?? 1, transform.scaleY ?? 1)
   if (opts.rotation) ctx.rotate((opts.rotation * Math.PI) / 180)
   if (opts.flip) ctx.scale(-1, 1)
-  const image = transform.hue === undefined ? source : tinted(source, transform.hue)
+  if (corners > 0 && !roundTile) {
+    // Clip in the image's own space so the corners turn and move with it.
+    ctx.beginPath()
+    roundedRect(ctx, -dw / 2, -dh / 2, dw, dh, (corners * Math.min(dw, dh)) / 2)
+    ctx.clip()
+  }
+  const image = transform.hue === undefined ? source : tinted(source, transform.hue, transform.tint ?? TINT_STRENGTH)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh)
@@ -196,7 +233,7 @@ let tintCanvas: Canvas2D | null = null
  * rotation) also colors black, white and grey images, and it doesn't rely on
  * canvas filters, which some browsers ignore.
  */
-function tinted(source: Canvas2D, hue: number): Canvas2D {
+function tinted(source: Canvas2D, hue: number, strength: number): Canvas2D {
   tintCanvas ??= makeCanvas(1, 1)
   const c = tintCanvas
   if (c.width !== source.width || c.height !== source.height) {
@@ -211,7 +248,7 @@ function tinted(source: Canvas2D, hue: number): Canvas2D {
   t.clearRect(0, 0, c.width, c.height)
   t.drawImage(source, 0, 0)
   t.globalCompositeOperation = 'source-atop'
-  t.globalAlpha = TINT_STRENGTH
+  t.globalAlpha = strength
   t.fillStyle = `hsl(${Math.round(((hue % 360) + 360) % 360)}, 100%, 55%)`
   t.fillRect(0, 0, c.width, c.height)
   t.globalCompositeOperation = 'source-over'
