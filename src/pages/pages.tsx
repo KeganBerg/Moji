@@ -189,7 +189,7 @@ const BASE_PAGES: Record<string, Page> = {
         <h2>How it works</h2>
         <ol>
           <li>
-            In any channel or DM, type <code>/moji a taco wearing sunglasses</code>.
+            In any channel or DM, type <code>/moji [prompt]</code>.
           </li>
           <li>
             Moji Locker replies with the finished 128 × 128 emoji. Only you see the reply, so it doesn't clutter the
