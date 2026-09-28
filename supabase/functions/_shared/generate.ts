@@ -108,9 +108,14 @@ const BLOCKED_CATEGORIES = [
 ]
 
 export const BLOCKED_MESSAGE = "That description can't be generated. Try wording it differently."
+const UNAVAILABLE_MESSAGE = 'AI generation is unavailable right now. Uploads still work.'
 
-/** True when the description is allowed. Fails closed: if moderation can't be reached, nothing is generated. */
-async function passesModeration(subject: string): Promise<boolean> {
+/**
+ * Checks the description. Fails closed: if moderation can't be reached, nothing
+ * is generated, but the person is told the service is down rather than that
+ * their words were blocked.
+ */
+async function moderate(subject: string): Promise<'ok' | 'blocked' | 'unavailable'> {
   try {
     const res = await fetch('https://api.openai.com/v1/moderations', {
       method: 'POST',
@@ -122,15 +127,15 @@ async function passesModeration(subject: string): Promise<boolean> {
     })
     if (!res.ok) {
       console.error('moderation error', res.status, await res.text())
-      return false
+      return 'unavailable'
     }
     const categories: Record<string, boolean> = (await res.json()).results?.[0]?.categories ?? {}
     const hits = BLOCKED_CATEGORIES.filter((c) => categories[c])
     if (hits.length) console.warn('description blocked by moderation', hits)
-    return hits.length === 0
+    return hits.length ? 'blocked' : 'ok'
   } catch (e) {
     console.error('moderation unreachable', e)
-    return false
+    return 'unavailable'
   }
 }
 
@@ -150,7 +155,9 @@ export async function generateEmoji(
   if (subject.length > MAX_PROMPT) {
     return { ok: false, status: 400, error: `Keep the description under ${MAX_PROMPT} characters` }
   }
-  if (!(await passesModeration(subject))) return { ok: false, status: 400, error: BLOCKED_MESSAGE }
+  const moderation = await moderate(subject)
+  if (moderation === 'blocked') return { ok: false, status: 400, error: BLOCKED_MESSAGE }
+  if (moderation === 'unavailable') return { ok: false, status: 503, error: UNAVAILABLE_MESSAGE }
 
   const day = new Date().toISOString().slice(0, 10)
   const cacheKey = await sha256(`${MODEL}|${QUALITY}|${style}|${subject.toLowerCase()}`)
@@ -230,11 +237,7 @@ export async function generateEmoji(
     return {
       ok: false,
       status: blocked ? 400 : unavailable ? 503 : 502,
-      error: blocked
-        ? BLOCKED_MESSAGE
-        : unavailable
-          ? 'AI generation is unavailable right now. Uploads still work.'
-          : 'Generation failed. Try again.',
+      error: blocked ? BLOCKED_MESSAGE : unavailable ? UNAVAILABLE_MESSAGE : 'Generation failed. Try again.',
     }
   }
   const result = await res.json()

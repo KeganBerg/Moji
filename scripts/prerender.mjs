@@ -19,6 +19,9 @@ function fill(html, { description, url, body }) {
     .replace(/(<meta property="og:url" content=")[^"]*/, `$1${url}`)
     .replace(/(<meta property="og:description" content=")[^"]*/, `$1${escape(description)}`)
     .replace('<div id="root"></div>', `<div id="root">${body}</div>`)
+    // The app's structured data describes the home page only.
+    .replace(/\s*<script type="application\/ld\+json">[\s\S]*?<\/script>/, '')
+  if (out.includes('ld+json')) throw new Error(`Structured data left on ${url}`)
   if (!out.includes(body)) throw new Error(`Template is missing the root element for ${url}`)
   return out
 }
