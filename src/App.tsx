@@ -995,7 +995,11 @@ function Editor() {
                 )}
               </div>
               {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
-              {stickerIssue && <p className="hint is-warning">{stickerIssue}</p>}
+              {stickerIssue && (
+                <p className="hint is-warning" role="status">
+                  {stickerIssue}
+                </p>
+              )}
 
               <button type="button" className="primary" onClick={download} disabled={!source}>
                 <Download size={16} aria-hidden />
@@ -1014,7 +1018,13 @@ function Editor() {
                   {t('saveEveryDownload')}
                 </label>
                 {platform.id === 'instagram' && canCopy && (
-                  <button type="button" className="text-button share-button" onClick={copySticker} disabled={!result}>
+                  <button
+                    type="button"
+                    className="text-button share-button"
+                    onClick={copySticker}
+                    disabled={!result}
+                    aria-live="polite"
+                  >
                     {copiedResult && copiedResult === result ? (
                       <Check size={14} aria-hidden />
                     ) : (
@@ -1038,7 +1048,11 @@ function Editor() {
               {platform.id === 'instagram' && (
                 <p className="hint is-howto">{t(canCopy ? 'instagramHint' : 'instagramSaveHint')}</p>
               )}
-              {platform.id === 'giphy' && <p className="hint is-howto">{t('giphyHint')}</p>}
+              {platform.id === 'giphy' && (
+                <p className="hint is-howto" id="giphy-howto">
+                  {t('giphyHint')}
+                </p>
+              )}
             </div>
           </section>
         </div>
