@@ -11,9 +11,10 @@ interface Props<T extends string> {
   value: T
   onChange: (value: T) => void
   size?: 'sm' | 'md'
+  disabled?: boolean
 }
 
-export function Segmented<T extends string>({ label, options, value, onChange, size = 'md' }: Props<T>) {
+export function Segmented<T extends string>({ label, options, value, onChange, size = 'md', disabled }: Props<T>) {
   const current = Math.max(
     0,
     options.findIndex((o) => o.value === value),
@@ -51,6 +52,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, s
           role="radio"
           aria-checked={value === o.value}
           tabIndex={i === current ? 0 : -1}
+          disabled={disabled}
           className={value === o.value ? 'is-active' : undefined}
           onClick={() => onChange(o.value)}
         >

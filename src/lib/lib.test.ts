@@ -292,3 +292,16 @@ describe('motion intensity', () => {
     expect(withIntensity(getAnimation('spin'), 0.5).at(0.5).rotate).toBeCloseTo(Math.PI)
   })
 })
+
+describe('withSpeed', () => {
+  it('keeps enough frames that a fast motion still moves', () => {
+    for (const a of ANIMATIONS.filter((a) => a.frames > 1)) {
+      for (const speed of [1.5, 2, 2.5, 3]) {
+        const fast = withSpeed(a, speed)
+        expect(fast.frames).toBeGreaterThanOrEqual(Math.min(a.frames, 8))
+        const poses = new Set(Array.from({ length: fast.frames }, (_, i) => JSON.stringify(fast.at(i / fast.frames))))
+        expect(poses.size).toBeGreaterThan(2)
+      }
+    }
+  })
+})

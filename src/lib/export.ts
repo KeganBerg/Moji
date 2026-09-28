@@ -75,14 +75,45 @@ async function renderFrames(
 }
 
 export function encodeGif(frames: Uint8ClampedArray[], size: number, delay: number, colors: number): Uint8Array {
+  const steps = gifSteps(frames, size, delay, colors)
+  let r = steps.next()
+  while (!r.done) r = steps.next()
+  return r.value
+}
+
+/** encodeGif that yields every few frames, so taps get through and a newer change can cancel it. */
+async function encodeGifAsync(
+  frames: Uint8ClampedArray[],
+  size: number,
+  delay: number,
+  colors: number,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
+  const steps = gifSteps(frames, size, delay, colors)
+  let r = steps.next()
+  while (!r.done) {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    signal?.throwIfAborted()
+    r = steps.next()
+  }
+  return r.value
+}
+
+function* gifSteps(
+  frames: Uint8ClampedArray[],
+  size: number,
+  delay: number,
+  colors: number,
+): Generator<void, Uint8Array, void> {
   // One palette for the whole loop keeps colors from flickering between frames.
   const all = new Uint8ClampedArray(frames.length * frames[0].length)
   frames.forEach((f, i) => all.set(f, i * f.length))
   const palette = quantize(all, colors, { format: 'rgba4444', oneBitAlpha: true })
   const transparentIndex = palette.findIndex((c) => c[3] === 0)
   const gif = GIFEncoder()
-  frames.forEach((f, i) => {
-    const index = applyPalette(f, palette, 'rgba4444')
+  for (let i = 0; i < frames.length; i++) {
+    if (i % 4 === 0) yield
+    const index = applyPalette(frames[i], palette, 'rgba4444')
     gif.writeFrame(index, size, size, {
       palette: i === 0 ? palette : undefined,
       delay,
@@ -92,7 +123,7 @@ export function encodeGif(frames: Uint8ClampedArray[], size: number, delay: numb
       // Clear to background between frames, or transparent GIFs smear.
       dispose: 2,
     })
-  })
+  }
   gif.finish()
   return gif.bytes()
 }
@@ -144,6 +175,8 @@ export async function exportGif(
   for (const attempt of gifLadder(size)) {
     // A newer change replaced this export; stop instead of finishing the ladder.
     signal?.throwIfAborted()
+    // Halving a short loop leaves too few frames to show the motion; skip that step.
+    if (attempt.frameStep > 1 && Math.ceil(anim.frames / attempt.frameStep) < 6) continue
     const { count, delay } = frameTiming(anim, platform.maxFrames, attempt.frameStep)
     const key = `${attempt.size}:${count}`
     let frames = cache.get(key)
@@ -151,7 +184,7 @@ export async function exportGif(
       frames = await renderFrames(source, attempt.size, opts, anim, count, signal)
       cache.set(key, frames)
     }
-    const bytes = encodeGif(frames, attempt.size, delay, attempt.colors)
+    const bytes = await encodeGifAsync(frames, attempt.size, delay, attempt.colors, signal)
     const blob = new Blob([bytes as BlobPart], { type: 'image/gif' })
     const result: ExportResult = {
       blob,
