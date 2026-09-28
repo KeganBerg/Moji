@@ -12,7 +12,20 @@ const codes = LANGUAGES.map((l) => l.code).filter((c) => c !== 'en')
 const keys = Object.keys(en) as (keyof Messages)[]
 
 // Names, commands, file formats and addresses that are never translated.
-const PROTECTED = ['Moji Locker', 'moji.locker', '/moji', 'Slack', 'Discord', 'PNG', 'JPG', 'GIF', 'WebP', '@']
+const PROTECTED = [
+  'Moji Locker',
+  'moji.locker',
+  '/moji',
+  'Slack',
+  'Discord',
+  'PNG',
+  'JPG',
+  'GIF',
+  'WebP',
+  'GIPHY',
+  'Instagram',
+  '@',
+]
 const count = (text: string, term: string) => text.split(term).length - 1
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 

@@ -7,8 +7,15 @@
  * GIF or WEBP under 256 KB; names are 2+ chars of letters, numbers and
  * underscores (32 max in the upload form). Both apps render emoji at 128 px or
  * smaller, so 128 × 128 is the target for both.
+ * GIPHY stickers (support.giphy.com/hc/en-us/articles/360019683472): an
+ * animated GIF that loops forever with a transparent background (20%+ of the
+ * first frame clear), under 100 MB; static images are rejected. Instagram and
+ * TikTok search GIPHY stickers from verified channels.
+ * Instagram has no sticker upload: a transparent PNG pasted into a Story (or
+ * turned into a Cutout) becomes a sticker, and pasted stickers don't animate,
+ * so that preset always exports a large still PNG.
  */
-export type PlatformId = 'slack' | 'discord' | 'custom'
+export type PlatformId = 'slack' | 'discord' | 'giphy' | 'instagram' | 'custom'
 
 export interface Platform {
   id: PlatformId
@@ -19,6 +26,10 @@ export interface Platform {
   /** Small sizes the app actually displays emoji at, used for the chat preview. */
   displaySizes: number[]
   notes: string[]
+  /** Always exported as a still PNG, whatever motion is picked. */
+  staticOnly?: boolean
+  /** Needs motion and a transparent background to be accepted. */
+  stickerRules?: boolean
 }
 
 export const PLATFORMS: Record<PlatformId, Platform> = {
@@ -39,6 +50,26 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     maxFrames: 200,
     displaySizes: [22, 48],
     notes: ['128 × 128 px', 'Under 256 KB', 'PNG, JPG, GIF or WEBP', 'Sending animated emoji needs Nitro'],
+  },
+  giphy: {
+    id: 'giphy',
+    label: 'GIPHY',
+    size: 480,
+    maxBytes: 8 * 1024 * 1024,
+    maxFrames: 200,
+    displaySizes: [48, 96],
+    notes: ['480 × 480 px', 'Animated GIF', 'Transparent background'],
+    stickerRules: true,
+  },
+  instagram: {
+    id: 'instagram',
+    label: 'Instagram',
+    size: 1024,
+    maxBytes: 8 * 1024 * 1024,
+    maxFrames: 1,
+    displaySizes: [48, 96],
+    notes: ['1024 × 1024 px', 'Transparent PNG'],
+    staticOnly: true,
   },
   custom: {
     id: 'custom',
@@ -67,5 +98,6 @@ export function sanitizeName(raw: string, platform: PlatformId): string {
 export function formatBytes(bytes: number): string {
   // A no-break space keeps the number and its unit on one line.
   if (bytes < 1024) return `${bytes}\u00a0B`
+  if (bytes >= 1024 * 1024) return `${+(bytes / 1024 / 1024).toFixed(1)}\u00a0MB`
   return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)}\u00a0KB`
 }
