@@ -219,7 +219,7 @@ export function drawFrame(
     roundedRect(ctx, -dw / 2, -dh / 2, dw, dh, (corners * Math.min(dw, dh)) / 2)
     ctx.clip()
   }
-  const image = transform.hue === undefined ? source : tinted(source, transform.hue)
+  const image = transform.hue === undefined ? source : tinted(source, transform.hue, transform.tint ?? TINT_STRENGTH)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh)
@@ -233,7 +233,7 @@ let tintCanvas: Canvas2D | null = null
  * rotation) also colors black, white and grey images, and it doesn't rely on
  * canvas filters, which some browsers ignore.
  */
-function tinted(source: Canvas2D, hue: number): Canvas2D {
+function tinted(source: Canvas2D, hue: number, strength: number): Canvas2D {
   tintCanvas ??= makeCanvas(1, 1)
   const c = tintCanvas
   if (c.width !== source.width || c.height !== source.height) {
@@ -248,7 +248,7 @@ function tinted(source: Canvas2D, hue: number): Canvas2D {
   t.clearRect(0, 0, c.width, c.height)
   t.drawImage(source, 0, 0)
   t.globalCompositeOperation = 'source-atop'
-  t.globalAlpha = TINT_STRENGTH
+  t.globalAlpha = strength
   t.fillStyle = `hsl(${Math.round(((hue % 360) + 360) % 360)}, 100%, 55%)`
   t.fillRect(0, 0, c.width, c.height)
   t.globalCompositeOperation = 'source-over'

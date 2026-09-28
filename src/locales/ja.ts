@@ -51,6 +51,7 @@ const ja: Messages = {
   motion: '動き',
   motionHint: '1 つ選ぶか、いくつか組み合わせてください',
   speed: '速度',
+  intensity: '強さ',
   motionNone: '静止',
   motionSpin: '回転',
   motionBounce: 'バウンド',

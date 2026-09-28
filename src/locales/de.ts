@@ -51,6 +51,7 @@ const de: Messages = {
   motion: 'Bewegung',
   motionHint: 'Eine wählen oder mehrere kombinieren',
   speed: 'Tempo',
+  intensity: 'Intensität',
   motionNone: 'Statisch',
   motionSpin: 'Rotieren',
   motionBounce: 'Hüpfen',

@@ -27,7 +27,7 @@ import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
-import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './lib/animations'
+import { ANIMATIONS, INTENSITY, SPEED, composeAnimations, getAnimation, withIntensity, withSpeed } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
@@ -119,6 +119,7 @@ function Editor() {
   // Picked motions stack (e.g. Party + Bounce); an empty list means static.
   const [motionIds, setMotionIds] = useState<string[]>([])
   const [speed, setSpeed] = useState(SPEED.default)
+  const [intensity, setIntensity] = useState(INTENSITY.default)
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
@@ -151,11 +152,16 @@ function Editor() {
   // Instagram stickers don't animate, so that preset previews and exports a still.
   const animation = useMemo(
     () =>
-      platform.staticOnly ? getAnimation('none') : withSpeed(composeAnimations(motionIds.map(getAnimation)), speed),
-    [motionIds, speed, platform.staticOnly],
+      platform.staticOnly
+        ? getAnimation('none')
+        : withSpeed(composeAnimations(motionIds.map((id) => withIntensity(getAnimation(id), intensity))), speed),
+    [motionIds, speed, intensity, platform.staticOnly],
   )
-  // The motion picker's thumbnails play at the chosen speed too.
-  const motionThumbs = useMemo(() => ANIMATIONS.map((a) => withSpeed(a, speed)), [speed])
+  // The motion picker's thumbnails play at the chosen speed and intensity too.
+  const motionThumbs = useMemo(
+    () => ANIMATIONS.map((a) => withSpeed(withIntensity(a, intensity), speed)),
+    [speed, intensity],
+  )
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
@@ -198,6 +204,7 @@ function Editor() {
     setName('')
     setMotionIds([])
     setSpeed(SPEED.default)
+    setIntensity(INTENSITY.default)
     setTune(DEFAULT_TUNE)
     setError(null)
     resetAdjust()
@@ -721,6 +728,22 @@ function Editor() {
                     aria-valuetext={`${speed}×`}
                   />
                   <output aria-hidden>{speed}×</output>
+                </label>
+              )}
+              {motionIds.length > 0 && (
+                <label className="setting speed">
+                  <span>{t('intensity')}</span>
+                  <input
+                    type="range"
+                    min={INTENSITY.min}
+                    max={INTENSITY.max}
+                    step={INTENSITY.step}
+                    value={intensity}
+                    onChange={(e) => setIntensity(Number(e.target.value))}
+                    onDoubleClick={() => setIntensity(INTENSITY.default)}
+                    aria-valuetext={`${Math.round(intensity * 100)}%`}
+                  />
+                  <output aria-hidden>{Math.round(intensity * 100)}%</output>
                 </label>
               )}
             </div>

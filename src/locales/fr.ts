@@ -51,6 +51,7 @@ const fr: Messages = {
   motion: 'Animation',
   motionHint: 'Choisissez-en une ou combinez-en plusieurs',
   speed: 'Vitesse',
+  intensity: 'Intensité',
   motionNone: 'Statique',
   motionSpin: 'Tourner',
   motionBounce: 'Rebondir',
