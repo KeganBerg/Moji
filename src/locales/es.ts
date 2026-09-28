@@ -70,6 +70,7 @@ const es: Messages = {
   fit: 'Encajar',
   fill: 'Rellenar',
   padding: 'Margen',
+  corners: 'Esquinas',
   rotate: 'Rotación',
   turn: 'Girar',
   rotateLeft: 'Girar 90° a la izquierda',

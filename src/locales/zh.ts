@@ -70,6 +70,7 @@ const zh: Messages = {
   fit: '完整显示',
   fill: '填满',
   padding: '留白',
+  corners: '圆角',
   rotate: '旋转',
   turn: '方向',
   rotateLeft: '向左旋转 90°',

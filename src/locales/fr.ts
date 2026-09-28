@@ -70,6 +70,7 @@ const fr: Messages = {
   fit: 'Adapter',
   fill: 'Remplir',
   padding: 'Marge',
+  corners: 'Coins',
   rotate: 'Rotation',
   turn: 'Pivoter',
   rotateLeft: 'Pivoter de 90° vers la gauche',

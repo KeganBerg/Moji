@@ -70,6 +70,7 @@ const ru: Messages = {
   fit: 'Вписать',
   fill: 'Заполнить',
   padding: 'Отступ',
+  corners: 'Скругление',
   rotate: 'Поворот',
   turn: 'Ориентация',
   rotateLeft: 'Повернуть влево на 90°',
