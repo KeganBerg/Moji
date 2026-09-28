@@ -11,6 +11,10 @@ const id: Messages = {
   halloweenOff: 'Nonaktifkan tema Halloween',
 
   emojiPreview: 'Pratinjau emoji',
+
+  pauseAnimations: 'Jeda animasi',
+
+  playAnimations: 'Putar animasi',
   dropTitle: 'Letakkan gambar, atau deskripsikan di bawah',
   dropFormats: 'PNG, JPG, GIF, atau WebP. Bisa juga ditempel.',
   generating: 'Sedang membuat',

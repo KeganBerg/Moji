@@ -28,8 +28,8 @@ describe('platform presets', () => {
     expect(PLATFORMS.discord).toMatchObject({ size: 128, maxBytes: 262144 })
   })
   it('formats bytes', () => {
-    expect(formatBytes(512)).toBe('512 B')
-    expect(formatBytes(131072)).toBe('128 KB')
+    expect(formatBytes(512)).toBe('512\u00a0B')
+    expect(formatBytes(131072)).toBe('128\u00a0KB')
   })
 })
 
@@ -244,6 +244,9 @@ describe('pageFor', () => {
   it('routes the editor, info pages and unknown paths', () => {
     expect(pageFor('/')).toBeNull()
     expect(pageFor('/faq/')).toBe('faq')
+    expect(pageFor('/index.html')).toBeNull()
+    expect(pageFor('/faq/index.html')).toBe('faq')
+    expect(pageFor('//faq')).toBe('faq')
     expect(pageFor('/guides/nope')).toBe(NOT_FOUND)
     expect(pageFor('/does-not-exist')).toBe(NOT_FOUND)
   })

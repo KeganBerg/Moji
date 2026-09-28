@@ -11,6 +11,10 @@ const ru: Messages = {
   halloweenOff: 'Выключить тему Хэллоуина',
 
   emojiPreview: 'Предпросмотр эмодзи',
+
+  pauseAnimations: 'Приостановить анимацию',
+
+  playAnimations: 'Воспроизвести анимацию',
   dropTitle: 'Перетащите изображение или опишите нужное ниже',
   dropFormats: 'PNG, JPG, GIF или WebP. Можно и вставить из буфера.',
   generating: 'Создаём',
@@ -49,11 +53,11 @@ const ru: Messages = {
   motionBounce: 'Прыжки',
   motionShake: 'Тряска',
   motionPulse: 'Пульс',
-  motionWiggle: 'Покачивание',
+  motionWiggle: 'Качание',
   motionParty: 'Вечеринка',
   motionFloat: 'Парение',
   motionJiggle: 'Дрожь',
-  motionHeartbeat: 'Сердцебиение',
+  motionHeartbeat: 'Сердце',
   motionFlip: 'Переворот',
   motionSwing: 'Маятник',
   adjust: 'Обработка',

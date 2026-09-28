@@ -11,6 +11,10 @@ const zh: Messages = {
   halloweenOff: '关闭万圣节主题',
 
   emojiPreview: '表情预览',
+
+  pauseAnimations: '暂停动画',
+
+  playAnimations: '播放动画',
   dropTitle: '拖入图片，或在下方输入描述',
   dropFormats: '支持 PNG、JPG、GIF 或 WebP，也可以直接粘贴。',
   generating: '正在生成',

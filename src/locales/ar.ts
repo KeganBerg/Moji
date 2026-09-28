@@ -11,6 +11,10 @@ const ar: Messages = {
   halloweenOff: 'إيقاف مظهر الهالوين',
 
   emojiPreview: 'معاينة الرمز التعبيري',
+
+  pauseAnimations: 'إيقاف الرسوم المتحركة مؤقتًا',
+
+  playAnimations: 'تشغيل الرسوم المتحركة',
   dropTitle: 'أفلت صورة هنا، أو صِف واحدة أدناه',
   dropFormats: 'PNG أو JPG أو GIF أو WebP. يمكنك اللصق أيضًا.',
   generating: 'جارٍ الإنشاء',

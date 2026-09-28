@@ -288,7 +288,11 @@ export function getPage(key: string): Page {
  * null for the editor, or NOT_FOUND for anything else.
  */
 export function pageFor(pathname: string): string | null {
-  const key = pathname.replace(/\/+$/, '').slice(1)
-  if (key === '' || key === 'index.html') return null
+  const key = pathname
+    .replace(/\/{2,}/g, '/')
+    .replace(/\/index\.html$/, '')
+    .replace(/\/+$/, '')
+    .slice(1)
+  if (key === '') return null
   return Object.hasOwn(PAGES, key) ? key : NOT_FOUND
 }

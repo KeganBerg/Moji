@@ -11,6 +11,10 @@ const tr: Messages = {
   halloweenOff: 'Cadılar Bayramı temasını kapat',
 
   emojiPreview: 'Emoji önizlemesi',
+
+  pauseAnimations: 'Animasyonları duraklat',
+
+  playAnimations: 'Animasyonları oynat',
   dropTitle: 'Bir görseli sürükleyip bırakın veya aşağıda tarif edin',
   dropFormats: 'PNG, JPG, GIF veya WebP. Yapıştırarak da ekleyebilirsiniz.',
   generating: 'Oluşturuluyor',

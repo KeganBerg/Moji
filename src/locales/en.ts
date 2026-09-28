@@ -13,6 +13,8 @@ export const en = {
 
   // Stage and composer
   emojiPreview: 'Emoji preview',
+  pauseAnimations: 'Pause animations',
+  playAnimations: 'Play animations',
   dropTitle: 'Drop an image, or describe one below',
   dropFormats: 'PNG, JPG, GIF or WebP. Pasting works too.',
   generating: 'Generating',

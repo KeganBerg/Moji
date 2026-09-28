@@ -53,13 +53,18 @@ export function readStored(): LangCode {
 
 let latestRequest = 0
 
-export async function setLanguage(lang: LangCode) {
+function store(lang: LangCode) {
   try {
     if (lang === 'en') localStorage.removeItem(STORAGE_KEY)
     else localStorage.setItem(STORAGE_KEY, lang)
   } catch {
     // Storage blocked: the choice lasts for this visit only.
   }
+}
+
+const RELOADED_KEY = 'moji-language-reloaded'
+
+export async function setLanguage(lang: LangCode) {
   // A slower load must not overwrite a language picked after it.
   const request = ++latestRequest
   let messages: Partial<Messages> = en
@@ -69,10 +74,21 @@ export async function setLanguage(lang: LangCode) {
     try {
       messages = (await load()).default
     } catch {
-      // Offline or a failed request: stay in the current language.
+      // A tab opened before a deploy asks for a language file that no longer
+      // exists. Reload once to pick up the new files; offline, stay as is.
+      if (request !== latestRequest || !navigator.onLine) return
+      try {
+        if (sessionStorage.getItem(RELOADED_KEY)) return
+        sessionStorage.setItem(RELOADED_KEY, '1')
+      } catch {
+        return
+      }
+      store(lang)
+      window.location.reload()
       return
     }
   }
+  store(lang)
   if (request !== latestRequest) return
   state = { lang, messages }
   emit()

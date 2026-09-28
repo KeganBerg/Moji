@@ -11,6 +11,10 @@ const pt: Messages = {
   halloweenOff: 'Desativar o tema de Halloween',
 
   emojiPreview: 'Prévia do emoji',
+
+  pauseAnimations: 'Pausar animações',
+
+  playAnimations: 'Reproduzir animações',
   dropTitle: 'Solte uma imagem ou descreva uma abaixo',
   dropFormats: 'PNG, JPG, GIF ou WebP. Você também pode colar.',
   generating: 'Gerando',

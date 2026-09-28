@@ -28,8 +28,12 @@ export function Segmented<T extends string>({ label, options, value, onChange, s
       ArrowDown: 1,
       ArrowUp: -1,
     }
+    // Move from the focused option, which can differ from the selected one.
+    const buttons = [...e.currentTarget.children]
+    const focused = buttons.indexOf(document.activeElement as Element)
+    const from = focused >= 0 ? focused : current
     let next: number
-    if (e.key in step) next = (current + step[e.key] + options.length) % options.length
+    if (e.key in step) next = (from + step[e.key] + options.length) % options.length
     else if (e.key === 'Home') next = 0
     else if (e.key === 'End') next = options.length - 1
     else return

@@ -8,6 +8,8 @@ import {
   Images,
   ImagePlus,
   LoaderCircle,
+  Pause,
+  Play,
   RotateCcw,
   RotateCw,
   Save,
@@ -18,6 +20,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ChatPreview } from './components/ChatPreview'
 import { EmojiCanvas } from './components/EmojiCanvas'
+import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
@@ -126,6 +129,11 @@ function Editor() {
 
   const [gallery, setGallery] = useState<GalleryItem[]>([])
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [paused, setPausedState] = useState(false)
+  useEffect(() => {
+    setPaused(paused)
+    document.documentElement.toggleAttribute('data-paused', paused)
+  }, [paused])
   const [autoSave, setAutoSaveState] = useState(getAutoSave)
   // The export last saved, so the button can say "Saved" until something changes.
   const [savedResult, setSavedResult] = useState<ExportResult | null>(null)
@@ -335,11 +343,27 @@ function Editor() {
     }
   }
 
+  // A click while the file is still being sized downloads it once it's ready
+  // (for the same image; picking another one cancels it).
+  const downloadWanted = useRef<HTMLCanvasElement | null>(null)
   const download = () => {
-    if (!result) return
+    if (!result) {
+      downloadWanted.current = source
+      return
+    }
     downloadBlob(result.blob, fileName)
     if (autoSave) void saveCurrent()
   }
+  const downloadRef = useRef(download)
+  useEffect(() => {
+    downloadRef.current = download
+  })
+  useEffect(() => {
+    if (!result || !downloadWanted.current) return
+    const wanted = downloadWanted.current === source
+    downloadWanted.current = null
+    if (wanted) downloadRef.current()
+  }, [result, source])
 
   const deleteSaved = async (item: GalleryItem) => {
     try {
@@ -387,7 +411,7 @@ function Editor() {
         </label>
         <button type="button" className="gallery-button" onClick={() => setGalleryOpen(true)}>
           <Images size={16} aria-hidden />
-          {t('gallery')}
+          <span className="gallery-text">{t('gallery')}</span>
           {gallery.length > 0 && <span className="count">{gallery.length}</span>}
         </button>
       </SiteHeader>
@@ -423,6 +447,18 @@ function Editor() {
                 </span>
                 <strong>{t('dropTitle')}</strong>
                 <span>{t('dropFormats')}</span>
+              </button>
+            )}
+            {source && (
+              <button
+                type="button"
+                className="icon-button pause-button"
+                aria-pressed={paused}
+                aria-label={t('pauseAnimations')}
+                title={paused ? t('playAnimations') : t('pauseAnimations')}
+                onClick={() => setPausedState(!paused)}
+              >
+                {paused ? <Play size={15} aria-hidden /> : <Pause size={15} aria-hidden />}
               </button>
             )}
             {generating && (
@@ -769,7 +805,7 @@ function Editor() {
               <label className="field">
                 <span>{t('name')}</span>
                 <div className="input-affix">
-                  <span>:</span>
+                  <span aria-hidden>:</span>
                   {/* Sized to its text, so the closing colon sits right after the name. */}
                   <span className="affix-grow" data-value={name || emojiName}>
                     <input
@@ -781,7 +817,7 @@ function Editor() {
                       size={1}
                     />
                   </span>
-                  <span>:</span>
+                  <span aria-hidden>:</span>
                 </div>
               </label>
 
@@ -798,18 +834,18 @@ function Editor() {
                   <>
                     <span className="status-dot" />
                     <span>
-                      {result.withinLimit ? t('ready') : t('overLimit')} · {result.size}×{result.size}{' '}
-                      {result.extension.toUpperCase()} ·{' '}
-                      {t('sizeOf', { size: formatBytes(result.bytes), max: formatBytes(platform.maxBytes) })}
+                      {result.withinLimit ? t('ready') : t('overLimit')} ·{' '}
+                      {isolate(`${result.size}×${result.size} ${result.extension.toUpperCase()}`)} ·{' '}
+                      {t('sizeOf', { size: isolate(formatBytes(result.bytes)), max: isolate(formatBytes(platform.maxBytes)) })}
                     </span>
                   </>
                 )}
               </div>
               {result && !result.withinLimit && <p className="hint">{t('overLimitHint')}</p>}
 
-              <button type="button" className="primary" onClick={download} disabled={!result || exporting}>
+              <button type="button" className="primary" onClick={download} disabled={!source}>
                 <Download size={16} aria-hidden />
-                <span className="primary-label">{t('downloadFile', { file: fileName })}</span>
+                <DownloadLabel text={t('downloadFile', { file: '\u0000' })} base={emojiName} extension={extension} />
               </button>
               <div className="save-row">
                 <label className="auto-save">
@@ -917,4 +953,28 @@ function useInView(ref: RefObject<HTMLElement | null>) {
     return () => observer.disconnect()
   }, [ref])
   return inView
+}
+
+/** Keeps numbers and Latin text in their own order inside right-to-left sentences. */
+function isolate(text: string) {
+  return `\u2068${text}\u2069`
+}
+
+/**
+ * "Download name.gif" with only the name shortened when space runs out, so the
+ * verb (which comes last in some languages) and the file type stay visible.
+ */
+function DownloadLabel({ text, base, extension }: { text: string; base: string; extension: string }) {
+  const [before, after = ''] = text.split('\u0000')
+  return (
+    <span className="primary-label">
+      {before && <span className="dl-fixed">{before}</span>}
+      {/* File names read left to right even inside right-to-left text. */}
+      <span className="dl-file" dir="ltr">
+        <span className="dl-name">{base}</span>
+        <span className="dl-fixed">.{extension}</span>
+      </span>
+      {after && <span className="dl-fixed">{after}</span>}
+    </span>
+  )
 }

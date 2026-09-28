@@ -65,6 +65,7 @@ export function sanitizeName(raw: string, platform: PlatformId): string {
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`
+  // A no-break space keeps the number and its unit on one line.
+  if (bytes < 1024) return `${bytes}\u00a0B`
+  return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)}\u00a0KB`
 }

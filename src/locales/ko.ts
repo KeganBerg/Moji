@@ -11,6 +11,10 @@ const ko: Messages = {
   halloweenOff: '핼러윈 테마 끄기',
 
   emojiPreview: '이모지 미리보기',
+
+  pauseAnimations: '애니메이션 일시정지',
+
+  playAnimations: '애니메이션 재생',
   dropTitle: '이미지를 끌어다 놓거나 아래에 설명을 입력하세요',
   dropFormats: 'PNG, JPG, GIF, WebP를 지원합니다. 붙여넣기도 가능합니다.',
   generating: '생성 중',

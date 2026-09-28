@@ -22,10 +22,9 @@ export function NumberField({ value, min, max, onChange }: Props) {
   }
   return (
     <input
-      type="number"
+      // Text, not number: browsers keep showing "1e3" in a number input even after it's clamped.
+      type="text"
       inputMode="numeric"
-      min={min}
-      max={max}
       value={draft ?? value}
       onChange={(e) => {
         setDraft(e.target.value)
