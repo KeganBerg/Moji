@@ -1989,6 +1989,21 @@ html[data-paused] .motion-dot {
   }
 }
 
+/* Direction names run long ("Counter-clockwise"), so they get the full row and may wrap. */
+.spin-direction > .segmented {
+  flex-basis: 100%;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.spin-direction .segmented button {
+  height: auto;
+  min-height: 26px;
+  padding: 4px 6px;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Fits "0.25×" so the slider doesn't shift as the value changes. */
 .setting.speed output {
   min-width: 40px;

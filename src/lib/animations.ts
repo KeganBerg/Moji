@@ -23,6 +23,12 @@ export interface Animation {
   frames: number
   /** Whether the emoji needs to shrink a little so motion stays inside the canvas. */
   inset: number
+  /**
+   * Motion that turns into a jumble when frames are dropped (a spin missing
+   * frames jumps around instead of turning), so export shrinks the canvas
+   * before it drops frames.
+   */
+  keepFrames?: boolean
   at(t: number): FrameTransform
 }
 
@@ -36,6 +42,7 @@ export const ANIMATIONS: Animation[] = [
     duration: 1200,
     frames: 24,
     inset: 0.82,
+    keepFrames: true,
     at: (t) => ({ rotate: t * TAU }),
   },
   {
@@ -147,6 +154,34 @@ export function getAnimation(id: string): Animation {
   return ANIMATIONS.find((a) => a.id === id) ?? ANIMATIONS[0]
 }
 
+export type SpinDirection = 'cw' | 'ccw' | 'chaotic'
+export const SPIN_DIRECTIONS: SpinDirection[] = ['cw', 'ccw', 'chaotic']
+
+// Chaotic spin poses in degrees: big, uneven jumps both ways, so the turn has no direction.
+const CHAOS_POSES = [0, 150, 40, 250, 110, 320, 200, 60, 280, 170, 20, 230]
+
+/** Spin turning the given way. Every other motion comes back unchanged. */
+export function withSpinDirection(anim: Animation, direction: SpinDirection): Animation {
+  if (anim.id !== 'spin' || direction === 'cw') return anim
+  if (direction === 'ccw') return { ...anim, at: (t) => ({ rotate: -t * TAU }) }
+  const n = CHAOS_POSES.length
+  return {
+    ...anim,
+    frames: n,
+    keepFrames: false,
+    at: (t) => ({ rotate: (CHAOS_POSES[Math.floor(t * n) % n] * Math.PI) / 180 }),
+  }
+}
+
+/**
+ * The loop as a GIF with this many frames shows it: each frame held until the
+ * next. Previews play this, so they show exactly what the export will.
+ */
+export function stepped(anim: Animation, frames: number): Animation {
+  if (anim.frames <= 1 || frames <= 1) return anim
+  return { ...anim, at: (t) => anim.at(Math.floor(t * frames) / frames) }
+}
+
 /**
  * Stacks several animations into one loop (e.g. Party + Bounce). The loop
  * runs as long as the slowest pick; faster ones repeat a whole number of
@@ -165,6 +200,7 @@ export function composeAnimations(list: Animation[]): Animation {
     duration,
     frames: Math.max(...parts.map(({ a, cycles }) => a.frames * cycles)),
     inset: Math.min(...moving.map((a) => a.inset)),
+    keepFrames: moving.some((a) => a.keepFrames),
     at: (t) => {
       let rotate = 0,
         scaleX = 1,

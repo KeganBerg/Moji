@@ -22,11 +22,20 @@ export interface GifAttempt {
 /**
  * The order we try GIF settings in until the file fits the platform limit:
  * fewer colors first (hardly visible at emoji size), then fewer frames, then
- * a smaller canvas. Exported for tests.
+ * a smaller canvas. Motion that needs every frame (keepFrames) tries every
+ * canvas size before it drops frames. Exported for tests.
  */
-export function gifLadder(size: number): GifAttempt[] {
+export function gifLadder(size: number, keepFrames = false): GifAttempt[] {
   const sizes = [size, Math.round(size * 0.875), Math.round(size * 0.75)]
   const out: GifAttempt[] = []
+  if (keepFrames) {
+    for (const frameStep of [1, 2]) {
+      for (const s of sizes) {
+        for (const colors of [256, 128, 64]) out.push({ size: s, frameStep, colors })
+      }
+    }
+    return out
+  }
   for (const s of sizes) {
     for (const frameStep of [1, 2]) {
       for (const colors of [256, 128, 64]) out.push({ size: s, frameStep, colors })
@@ -141,7 +150,7 @@ export async function exportGif(
 ): Promise<ExportResult> {
   const cache = new Map<string, Uint8ClampedArray[]>()
   let best: ExportResult | null = null
-  for (const attempt of gifLadder(size)) {
+  for (const attempt of gifLadder(size, anim.keepFrames)) {
     // A newer change replaced this export; stop instead of finishing the ladder.
     signal?.throwIfAborted()
     const { count, delay } = frameTiming(anim, platform.maxFrames, attempt.frameStep)

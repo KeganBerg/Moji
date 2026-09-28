@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, stepped, withSpeed, withSpinDirection } from './animations'
 import { encodeGif, frameTiming, gifLadder } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
@@ -88,6 +88,39 @@ describe('gif sizing', () => {
     const bytes = encodeGif(frames, size, 50, 64)
     expect(new TextDecoder().decode(bytes.slice(0, 6))).toBe('GIF89a')
     expect(bytes[bytes.length - 1]).toBe(0x3b)
+  })
+})
+
+describe('spin direction', () => {
+  const spin = getAnimation('spin')
+  it('turns clockwise by default and counter-clockwise on request', () => {
+    expect(withSpinDirection(spin, 'cw')).toBe(spin)
+    expect(spin.at(0.25).rotate).toBeGreaterThan(0)
+    expect(withSpinDirection(spin, 'ccw').at(0.25).rotate).toBeCloseTo(-Math.PI / 2)
+  })
+  it('makes chaotic spin jump between fixed poses, the same every loop', () => {
+    const chaos = withSpinDirection(spin, 'chaotic')
+    const poses = Array.from({ length: chaos.frames }, (_, i) => chaos.at(i / chaos.frames).rotate)
+    expect(new Set(poses).size).toBe(chaos.frames)
+    expect(chaos.at(0.5).rotate).toBe(chaos.at(0.5 + 1 / (chaos.frames * 4)).rotate)
+  })
+  it('leaves other motions alone', () => {
+    expect(withSpinDirection(getAnimation('bounce'), 'chaotic')).toBe(getAnimation('bounce'))
+  })
+})
+
+describe('frame-exact previews', () => {
+  it('holds each exported frame until the next one', () => {
+    const spin = getAnimation('spin')
+    const shown = stepped(spin, 12)
+    expect(shown.at(0.05).rotate).toBe(spin.at(0).rotate)
+    expect(shown.at(1 / 12 + 0.01).rotate).toBeCloseTo(spin.at(1 / 12).rotate!)
+  })
+  it('keeps every spin frame and shrinks the canvas first when a GIF is too big', () => {
+    const ladder = gifLadder(128, true)
+    expect(ladder.findIndex((a) => a.frameStep > 1)).toBeGreaterThan(ladder.findIndex((a) => a.size < 100))
+    expect(composeAnimations([getAnimation('spin'), getAnimation('party')]).keepFrames).toBe(true)
+    expect(getAnimation('bounce').keepFrames).toBeFalsy()
   })
 })
 

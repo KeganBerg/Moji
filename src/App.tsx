@@ -24,7 +24,18 @@ import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
-import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './lib/animations'
+import {
+  ANIMATIONS,
+  SPEED,
+  SPIN_DIRECTIONS,
+  composeAnimations,
+  getAnimation,
+  stepped,
+  withSpeed,
+  withSpinDirection,
+  type Animation,
+  type SpinDirection,
+} from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
@@ -63,6 +74,7 @@ const HISTORY_LIMIT = 8
 // Message keys for labels defined by id in lib/.
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const motionKey = (id: string) => `motion${capitalize(id)}` as MessageKey
+const SPIN_LABELS: Record<SpinDirection, MessageKey> = { cw: 'spinCw', ccw: 'spinCcw', chaotic: 'spinChaotic' }
 const STYLE_KEYS: Record<StyleId, MessageKey> = {
   flat: 'styleFlat',
   '3d': 'style3d',
@@ -116,6 +128,7 @@ function Editor() {
   // Picked motions stack (e.g. Party + Bounce); an empty list means static.
   const [motionIds, setMotionIds] = useState<string[]>([])
   const [speed, setSpeed] = useState(SPEED.default)
+  const [spinDirection, setSpinDirection] = useState<SpinDirection>('cw')
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
@@ -125,7 +138,7 @@ function Editor() {
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
-  const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
+  const [exported, setExported] = useState<{ key: object; animation: Animation; result: ExportResult } | null>(null)
   const [error, setError] = useState<UiError | null>(null)
 
   const [gallery, setGallery] = useState<GalleryItem[]>([])
@@ -144,9 +157,20 @@ function Editor() {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
-  const animation = useMemo(() => withSpeed(composeAnimations(motionIds.map(getAnimation)), speed), [motionIds, speed])
-  // The motion picker's thumbnails play at the chosen speed too.
-  const motionThumbs = useMemo(() => ANIMATIONS.map((a) => withSpeed(a, speed)), [speed])
+  const animation = useMemo(
+    () =>
+      withSpeed(composeAnimations(motionIds.map((id) => withSpinDirection(getAnimation(id), spinDirection))), speed),
+    [motionIds, speed, spinDirection],
+  )
+  // The motion picker's thumbnails play at the chosen speed and spin direction too, frame for frame.
+  const motionThumbs = useMemo(
+    () =>
+      ANIMATIONS.map((a) => {
+        const anim = withSpeed(withSpinDirection(a, spinDirection), speed)
+        return stepped(anim, anim.frames)
+      }),
+    [speed, spinDirection],
+  )
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
@@ -187,6 +211,7 @@ function Editor() {
     setName('')
     setMotionIds([])
     setSpeed(SPEED.default)
+    setSpinDirection('cw')
     setTune(DEFAULT_TUNE)
     setError(null)
     resetAdjust()
@@ -207,6 +232,11 @@ function Editor() {
     })
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
   const result = exported?.key === exportKey ? exported.result : null
+  // Previews step through the frames the GIF will have, so they show exactly
+  // what downloads. While a new export runs they keep the last one's frame
+  // count if the motion is the same, so the preview doesn't flicker.
+  const exportedFrames = exported?.animation === animation ? exported.result.frames : animation.frames
+  const preview = useMemo(() => stepped(animation, exportedFrames), [animation, exportedFrames])
   const exporting = !!source && !result
   const emojiName = sanitizeName(name || active?.name || 'moji', platformId)
   const extension = animation.frames > 1 ? 'gif' : 'png'
@@ -307,7 +337,7 @@ function Editor() {
           animation.frames > 1
             ? await exportGif(source, platform.size, options, animation, platform, controller.signal)
             : await exportPng(source, platform.size, options, platform, controller.signal)
-        if (!cancelled) setExported({ key: exportKey, result: out })
+        if (!cancelled) setExported({ key: exportKey, animation, result: out })
       } catch (e) {
         if (!cancelled) setError(toUiError(e))
       }
@@ -445,7 +475,7 @@ function Editor() {
             {source ? (
               <EmojiCanvas
                 source={source}
-                animation={animation}
+                animation={preview}
                 options={options}
                 size={previewSize}
                 label={t('emojiPreview')}
@@ -483,7 +513,7 @@ function Editor() {
           </div>
 
           {source && active && (
-            <ChatPreview source={source} animation={animation} options={options} name={emojiName} seed={active.id} />
+            <ChatPreview source={source} animation={preview} options={options} name={emojiName} seed={active.id} />
           )}
 
           <div className="composer-wrap">
@@ -651,6 +681,18 @@ function Editor() {
                   )
                 })}
               </div>
+              {motionIds.includes('spin') && (
+                <div className="setting spin-direction">
+                  <span>{t('spinDirection')}</span>
+                  <Segmented
+                    label={t('spinDirection')}
+                    size="sm"
+                    options={SPIN_DIRECTIONS.map((d) => ({ value: d, label: t(SPIN_LABELS[d]) }))}
+                    value={spinDirection}
+                    onChange={setSpinDirection}
+                  />
+                </div>
+              )}
               {motionIds.length > 0 && (
                 <label className="setting speed">
                   <span>{t('speed')}</span>
@@ -825,7 +867,7 @@ function Editor() {
             <div className="group export" ref={exportBar}>
               {source && (
                 <div className="export-thumb checker" aria-hidden>
-                  <EmojiCanvas source={source} animation={animation} options={options} size={44} decorative />
+                  <EmojiCanvas source={source} animation={preview} options={options} size={44} decorative />
                 </div>
               )}
               <label className="field">
@@ -905,7 +947,7 @@ function Editor() {
 
       {source && !previewInView && (
         <div className="mini-preview checker" aria-hidden>
-          <EmojiCanvas source={source} animation={animation} options={options} size={64} decorative />
+          <EmojiCanvas source={source} animation={preview} options={options} size={64} decorative />
         </div>
       )}
 
