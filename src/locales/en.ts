@@ -73,6 +73,7 @@ export const en = {
   fit: 'Fit',
   fill: 'Fill',
   padding: 'Padding',
+  corners: 'Corners',
   rotate: 'Rotate',
   turn: 'Turn',
   rotateLeft: 'Rotate left 90°',

@@ -71,6 +71,7 @@ const ko: Messages = {
   fit: '맞추기',
   fill: '채우기',
   padding: '여백',
+  corners: '모서리',
   rotate: '회전',
   turn: '방향',
   rotateLeft: '왼쪽으로 90° 회전',

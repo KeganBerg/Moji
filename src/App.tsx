@@ -122,6 +122,7 @@ function Editor() {
   const [trim, setTrim] = useState(true)
   const [rotation, setRotation] = useState(0)
   const [flip, setFlip] = useState(false)
+  const [corners, setCorners] = useState(DEFAULT_RENDER.corners)
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
@@ -150,8 +151,8 @@ function Editor() {
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
-    () => ({ fit, padding, background, rotation, flip }),
-    [fit, padding, background, rotation, flip],
+    () => ({ fit, padding, background, rotation, flip, corners }),
+    [fit, padding, background, rotation, flip, corners],
   )
   const prepared = useMemo(
     () => (active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null) : null),
@@ -167,6 +168,7 @@ function Editor() {
     !trim ||
     rotation !== 0 ||
     flip ||
+    corners !== DEFAULT_RENDER.corners ||
     (!!active && (active.cutout !== active.cutoutDefault || active.cutoutStrength !== DEFAULT_STRENGTH))
   const resetAdjust = () => {
     setFit(DEFAULT_RENDER.fit)
@@ -175,6 +177,7 @@ function Editor() {
     setTrim(true)
     setRotation(0)
     setFlip(false)
+    setCorners(DEFAULT_RENDER.corners)
     if (active) updateActive({ cutout: active.cutoutDefault, cutoutStrength: DEFAULT_STRENGTH })
   }
   // Back to the empty editor, as if the page had just loaded. The destination stays.
@@ -731,6 +734,20 @@ function Editor() {
                   aria-valuetext={`${Math.round(padding * 100)}%`}
                 />
                 <output aria-hidden>{Math.round(padding * 100)}%</output>
+              </label>
+              <label className="setting">
+                <span>{t('corners')}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={corners}
+                  onChange={(e) => setCorners(Number(e.target.value))}
+                  onDoubleClick={() => setCorners(DEFAULT_RENDER.corners)}
+                  aria-valuetext={`${Math.round(corners * 100)}%`}
+                />
+                <output aria-hidden>{Math.round(corners * 100)}%</output>
               </label>
               <label className="setting">
                 <span>{t('rotate')}</span>

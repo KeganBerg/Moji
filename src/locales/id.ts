@@ -71,6 +71,7 @@ const id: Messages = {
   fit: 'Muat',
   fill: 'Penuhi',
   padding: 'Jarak tepi',
+  corners: 'Sudut',
   rotate: 'Rotasi',
   turn: 'Putar',
   rotateLeft: 'Putar 90° ke kiri',

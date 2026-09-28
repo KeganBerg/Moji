@@ -71,6 +71,7 @@ const pt: Messages = {
   fit: 'Encaixar',
   fill: 'Preencher',
   padding: 'Margem',
+  corners: 'Cantos',
   rotate: 'Rotação',
   turn: 'Girar',
   rotateLeft: 'Girar 90° para a esquerda',

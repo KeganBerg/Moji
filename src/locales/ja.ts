@@ -71,6 +71,7 @@ const ja: Messages = {
   fit: '全体を表示',
   fill: '枠いっぱい',
   padding: '余白',
+  corners: '角丸',
   rotate: '回転',
   turn: '向き',
   rotateLeft: '左に 90° 回転',

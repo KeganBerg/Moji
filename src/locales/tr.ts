@@ -71,6 +71,7 @@ const tr: Messages = {
   fit: 'Sığdır',
   fill: 'Doldur',
   padding: 'Kenar boşluğu',
+  corners: 'Köşeler',
   rotate: 'Döndür',
   turn: 'Yön',
   rotateLeft: '90° sola döndür',

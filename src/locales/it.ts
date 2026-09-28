@@ -71,6 +71,7 @@ const it: Messages = {
   fit: 'Adatta',
   fill: 'Riempi',
   padding: 'Margine',
+  corners: 'Angoli',
   rotate: 'Rotazione',
   turn: 'Gira',
   rotateLeft: 'Ruota di 90° a sinistra',

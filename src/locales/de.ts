@@ -71,6 +71,7 @@ const de: Messages = {
   fit: 'Einpassen',
   fill: 'Füllen',
   padding: 'Rand',
+  corners: 'Ecken',
   rotate: 'Drehen',
   turn: 'Drehen & Spiegeln',
   rotateLeft: 'Um 90° nach links drehen',

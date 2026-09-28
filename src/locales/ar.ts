@@ -71,6 +71,7 @@ const ar: Messages = {
   fit: 'احتواء',
   fill: 'ملء',
   padding: 'الهامش',
+  corners: 'الزوايا',
   rotate: 'تدوير',
   turn: 'الاتجاه',
   rotateLeft: 'تدوير 90° إلى اليسار',

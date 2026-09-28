@@ -71,6 +71,7 @@ const hi: Messages = {
   fit: 'फ़िट',
   fill: 'फ़िल',
   padding: 'पैडिंग',
+  corners: 'कोने',
   rotate: 'घुमाव',
   turn: 'घुमाएं/पलटें',
   rotateLeft: 'बाईं ओर 90° घुमाएं',
