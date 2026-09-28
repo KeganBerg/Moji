@@ -1,6 +1,6 @@
 // Supabase Edge Function: the Slack app's /moji slash command.
 //
-//   /moji a taco wearing sunglasses
+//   /moji [prompt]
 //   /moji pixel a happy ghost          (a leading style word picks the style)
 //
 // Slack wants an answer within 3 seconds, so the command is acknowledged at
@@ -84,7 +84,7 @@ export function emojiName(subject: string): string {
 const STYLE_LIST = Object.keys(STYLES).join(', ')
 const HELP =
   `Describe an emoji and Moji Locker makes it, sized for Slack.\n` +
-  '• `/moji a taco wearing sunglasses`\n' +
+  '• `/moji [prompt]`\n' +
   `• Start with a style to change the look: \`/moji pixel a happy ghost\` (${STYLE_LIST})\n` +
   `For motion, text and uploads, use <${SITE}|moji.locker>.`
 
