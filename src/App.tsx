@@ -27,7 +27,7 @@ import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
-import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
@@ -118,12 +118,14 @@ function Editor() {
   const [customKb, setCustomKb] = useState(256)
   // Picked motions stack (e.g. Party + Bounce); an empty list means static.
   const [motionIds, setMotionIds] = useState<string[]>([])
+  const [speed, setSpeed] = useState(SPEED.default)
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
   const [trim, setTrim] = useState(true)
   const [rotation, setRotation] = useState(0)
   const [flip, setFlip] = useState(false)
+  const [corners, setCorners] = useState(DEFAULT_RENDER.corners)
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
@@ -148,14 +150,17 @@ function Editor() {
   }, [platformId, customSize, customKb])
   // Instagram stickers don't animate, so that preset previews and exports a still.
   const animation = useMemo(
-    () => (platform.staticOnly ? getAnimation('none') : composeAnimations(motionIds.map(getAnimation))),
-    [motionIds, platform.staticOnly],
+    () =>
+      platform.staticOnly ? getAnimation('none') : withSpeed(composeAnimations(motionIds.map(getAnimation)), speed),
+    [motionIds, speed, platform.staticOnly],
   )
+  // The motion picker's thumbnails play at the chosen speed too.
+  const motionThumbs = useMemo(() => ANIMATIONS.map((a) => withSpeed(a, speed)), [speed])
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
-    () => ({ fit, padding, background, rotation, flip }),
-    [fit, padding, background, rotation, flip],
+    () => ({ fit, padding, background, rotation, flip, corners }),
+    [fit, padding, background, rotation, flip, corners],
   )
   const prepared = useMemo(
     () => (active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null) : null),
@@ -171,6 +176,7 @@ function Editor() {
     !trim ||
     rotation !== 0 ||
     flip ||
+    corners !== DEFAULT_RENDER.corners ||
     (!!active && (active.cutout !== active.cutoutDefault || active.cutoutStrength !== DEFAULT_STRENGTH))
   const resetAdjust = () => {
     setFit(DEFAULT_RENDER.fit)
@@ -179,6 +185,7 @@ function Editor() {
     setTrim(true)
     setRotation(0)
     setFlip(false)
+    setCorners(DEFAULT_RENDER.corners)
     if (active) updateActive({ cutout: active.cutoutDefault, cutoutStrength: DEFAULT_STRENGTH })
   }
   // Back to the empty editor, as if the page had just loaded. The destination stays.
@@ -190,6 +197,7 @@ function Editor() {
     setPrompt('')
     setName('')
     setMotionIds([])
+    setSpeed(SPEED.default)
     setTune(DEFAULT_TUNE)
     setError(null)
     resetAdjust()
@@ -677,7 +685,7 @@ function Editor() {
                 </span>
               </div>
               <div className="motions" role="group" aria-label={t('motion')}>
-                {ANIMATIONS.map((a) => {
+                {motionThumbs.map((a) => {
                   const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
                   return (
                     <button
@@ -699,6 +707,22 @@ function Editor() {
                   )
                 })}
               </div>
+              {motionIds.length > 0 && (
+                <label className="setting speed">
+                  <span>{t('speed')}</span>
+                  <input
+                    type="range"
+                    min={SPEED.min}
+                    max={SPEED.max}
+                    step={SPEED.step}
+                    value={speed}
+                    onChange={(e) => setSpeed(Number(e.target.value))}
+                    onDoubleClick={() => setSpeed(SPEED.default)}
+                    aria-valuetext={`${speed}×`}
+                  />
+                  <output aria-hidden>{speed}×</output>
+                </label>
+              )}
             </div>
 
             <div className="group">
@@ -763,6 +787,20 @@ function Editor() {
                   aria-valuetext={`${Math.round(padding * 100)}%`}
                 />
                 <output aria-hidden>{Math.round(padding * 100)}%</output>
+              </label>
+              <label className="setting">
+                <span>{t('corners')}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={corners}
+                  onChange={(e) => setCorners(Number(e.target.value))}
+                  onDoubleClick={() => setCorners(DEFAULT_RENDER.corners)}
+                  aria-valuetext={`${Math.round(corners * 100)}%`}
+                />
+                <output aria-hidden>{Math.round(corners * 100)}%</output>
               </label>
               <label className="setting">
                 <span>{t('rotate')}</span>
