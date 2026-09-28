@@ -204,9 +204,24 @@ export function withSpeed(anim: Animation, speed: number): Animation {
   if (anim.frames <= 1 || speed === 1) return anim
   const target = anim.duration / speed
   const most = Math.max(anim.frames, 48)
-  let frames = Math.min(Math.round(anim.frames / speed), most, Math.floor(target / 20))
-  frames = Math.max(2, frames - (frames % 2))
-  const delay = Math.max(20, Math.round(target / frames / 10) * 10)
+  // Never fewer frames than the motion has (up to the 20 ms floor): faster
+  // loops get shorter delays instead, or a quick shake lands only on its still
+  // points. Among even counts near that, pick the one whose whole-10 ms delay
+  // lands closest to the asked-for speed.
+  const cap = Math.max(2, Math.min(Math.max(anim.frames, Math.round(anim.frames / speed)), most, Math.floor(target / 20)))
+  let frames = 2
+  let delay = Math.max(20, Math.round(target / 2 / 10) * 10)
+  let bestError = Infinity
+  for (let f = cap - (cap % 2); f >= Math.max(2, Math.ceil(cap * 0.6)); f -= 2) {
+    const d = Math.max(20, Math.round(target / f / 10) * 10)
+    const error = Math.abs(d * f - target)
+    if (error < bestError - 1e-9) {
+      bestError = error
+      frames = f
+      delay = d
+    }
+    if (error / target < 0.05) break
+  }
   return { ...anim, duration: delay * frames, frames }
 }
 

@@ -662,7 +662,7 @@ function Editor() {
 
         <div className="sidebar">
           <section className="inspector" aria-label={t('settings')}>
-            <div className="group">
+            <div className="group destination">
               <h2>{t('destination')}</h2>
               {/* Two rows so every name fits: custom emoji apps, then sticker apps. */}
               <div className="setting">
@@ -755,9 +755,9 @@ function Editor() {
                     value={speed}
                     onChange={(e) => setSpeed(Number(e.target.value))}
                     onDoubleClick={() => setSpeed(SPEED.default)}
-                    aria-valuetext={`${speed}×`}
+                    aria-valuetext={`${speed.toLocaleString(`${lang}-u-nu-latn`)}×`}
                   />
-                  <output aria-hidden>{speed}×</output>
+                  <output aria-hidden>{speed.toLocaleString(`${lang}-u-nu-latn`)}×</output>
                 </label>
               )}
               {motionIds.length > 0 && !platform.staticOnly && (
@@ -798,6 +798,7 @@ function Editor() {
                   ]}
                   value={active?.cutout ? 'remove' : 'keep'}
                   onChange={(v) => updateActive({ cutout: v === 'remove' })}
+                  disabled={!active}
                 />
               </div>
               {active?.cutout && (
@@ -835,7 +836,7 @@ function Editor() {
                   type="range"
                   min={0.4}
                   max={1}
-                  step={0.01}
+                  step={0.02}
                   value={1 - padding * 2}
                   onChange={(e) => setPadding(Math.round((1 - Number(e.target.value)) * 50) / 100)}
                   aria-valuetext={`${Math.round((1 - padding * 2) * 100)}%`}

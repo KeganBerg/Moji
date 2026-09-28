@@ -2016,3 +2016,19 @@ html[data-paused] .motion-dot {
 .setting.speed output {
   min-width: 40px;
 }
+
+/* Destination names get long in some languages ("Benutzerdefiniert"): size
+   each option to its own label and let the row shrink instead of overflowing. */
+.destination .segmented-sm {
+  grid-auto-columns: auto;
+}
+
+.destination .setting > .segmented {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.destination .segmented-sm button {
+  min-width: 0;
+  padding: 0 8px;
+}
