@@ -49,6 +49,7 @@ const id: Messages = {
   motion: 'Gerakan',
   motionHint: 'Pilih satu atau gabungkan beberapa',
   speed: 'Kecepatan',
+  intensity: 'Intensitas',
   motionNone: 'Statis',
   motionSpin: 'Putar',
   motionBounce: 'Pantul',

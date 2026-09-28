@@ -49,6 +49,7 @@ const tr: Messages = {
   motion: 'Hareket',
   motionHint: 'Birini seçin veya birkaçını birleştirin',
   speed: 'Hız',
+  intensity: 'Yoğunluk',
   motionNone: 'Sabit',
   motionSpin: 'Dönme',
   motionBounce: 'Zıplama',

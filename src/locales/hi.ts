@@ -49,6 +49,7 @@ const hi: Messages = {
   motion: 'मोशन',
   motionHint: 'एक चुनें या कुछ को मिलाएं',
   speed: 'गति',
+  intensity: 'तीव्रता',
   motionNone: 'स्थिर',
   motionSpin: 'घूमना',
   motionBounce: 'उछलना',

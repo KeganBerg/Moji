@@ -49,6 +49,7 @@ const pt: Messages = {
   motion: 'Movimento',
   motionHint: 'Escolha um ou combine vários',
   speed: 'Velocidade',
+  intensity: 'Intensidade',
   motionNone: 'Estático',
   motionSpin: 'Girar',
   motionBounce: 'Quicar',

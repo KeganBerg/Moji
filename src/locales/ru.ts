@@ -49,6 +49,7 @@ const ru: Messages = {
   motion: 'Анимация',
   motionHint: 'Выберите одну или совместите несколько',
   speed: 'Скорость',
+  intensity: 'Интенсивность',
   motionNone: 'Статика',
   motionSpin: 'Вращение',
   motionBounce: 'Прыжки',

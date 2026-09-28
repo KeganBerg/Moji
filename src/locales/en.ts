@@ -51,6 +51,7 @@ export const en = {
   motion: 'Motion',
   motionHint: 'Pick one or combine a few',
   speed: 'Speed',
+  intensity: 'Intensity',
   motionNone: 'Static',
   motionSpin: 'Spin',
   motionBounce: 'Bounce',

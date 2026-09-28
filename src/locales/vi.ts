@@ -49,6 +49,7 @@ const vi: Messages = {
   motion: 'Chuyển động',
   motionHint: 'Chọn một hoặc kết hợp vài kiểu',
   speed: 'Tốc độ',
+  intensity: 'Cường độ',
   motionNone: 'Tĩnh',
   motionSpin: 'Xoay tròn',
   motionBounce: 'Nảy',

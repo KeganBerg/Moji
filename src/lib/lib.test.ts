@@ -273,3 +273,16 @@ describe('pageFor', () => {
     expect(pageFor('/does-not-exist')).toBe(NOT_FOUND)
   })
 })
+
+describe('motion intensity', () => {
+  it('scales the Party wash and motion size', async () => {
+    const { withIntensity } = await import('./animations')
+    expect(withIntensity(getAnimation('party'), 0.5).at(0).tint).toBe(0.25)
+    expect(withIntensity(getAnimation('party'), 2).at(0).tint).toBe(0.8)
+    const wiggle = getAnimation('wiggle')
+    expect(withIntensity(wiggle, 2).at(0.25).rotate).toBeCloseTo(wiggle.at(0.25).rotate! * 2)
+    expect(withIntensity(wiggle, 2).inset).toBeLessThan(wiggle.inset)
+    // Spin keeps its full turn so the loop stays seamless.
+    expect(withIntensity(getAnimation('spin'), 0.5).at(0.5).rotate).toBeCloseTo(Math.PI)
+  })
+})

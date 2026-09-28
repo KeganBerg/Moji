@@ -49,6 +49,7 @@ const ko: Messages = {
   motion: '움직임',
   motionHint: '하나를 고르거나 여러 개를 조합하세요',
   speed: '속도',
+  intensity: '강도',
   motionNone: '정지',
   motionSpin: '회전',
   motionBounce: '통통',

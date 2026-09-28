@@ -49,6 +49,7 @@ const ar: Messages = {
   motion: 'الحركة',
   motionHint: 'اختر حركة واحدة أو اجمع بين عدة حركات',
   speed: 'السرعة',
+  intensity: 'الشدة',
   motionNone: 'ثابت',
   motionSpin: 'دوران',
   motionBounce: 'قفز',

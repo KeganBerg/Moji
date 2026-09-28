@@ -49,6 +49,7 @@ const it: Messages = {
   motion: 'Movimento',
   motionHint: 'Scegline uno o combinane alcuni',
   speed: 'Velocità',
+  intensity: 'Intensità',
   motionNone: 'Nessuno',
   motionSpin: 'Ruota',
   motionBounce: 'Rimbalza',
