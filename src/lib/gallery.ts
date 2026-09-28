@@ -33,9 +33,12 @@ async function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => I
   const db = await open()
   try {
     return await new Promise<T>((resolve, reject) => {
-      const req = fn(db.transaction(STORE, mode).objectStore(STORE))
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error ?? new Error('Gallery request failed'))
+      const tx = db.transaction(STORE, mode)
+      const req = fn(tx.objectStore(STORE))
+      // Resolve once the transaction commits: a full disk only fails at commit,
+      // and the item must not look saved when it isn't.
+      tx.oncomplete = () => resolve(req.result)
+      tx.onerror = tx.onabort = () => reject(tx.error ?? req.error ?? new Error('Gallery request failed'))
     })
   } finally {
     db.close()

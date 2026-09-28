@@ -70,7 +70,7 @@ export const cleanPrompt = (text: string) => text.trim().replace(/\s+/g, ' ')
 
 export type GenerateOutcome =
   | { ok: true; png: Uint8Array<ArrayBuffer>; cacheKey: string; cached: boolean; remaining: number | null }
-  | { ok: false; status: number; error: string; reason?: 'visitor' | 'global' }
+  | { ok: false; status: number; error: string; reason?: 'visitor' | 'global' | 'uncached' }
 
 async function callModel(model: string, prompt: string): Promise<Response> {
   return fetch('https://api.openai.com/v1/images/generations', {
@@ -148,6 +148,7 @@ export async function generateEmoji(
   visitor: string,
   subject: string,
   style: string,
+  { cacheOnly = false }: { cacheOnly?: boolean } = {},
 ): Promise<GenerateOutcome> {
   if (!Deno.env.get('OPENAI_API_KEY')) return { ok: false, status: 503, error: 'AI generation is not set up yet' }
   if (!Object.hasOwn(STYLES, style)) style = 'flat'
@@ -186,6 +187,7 @@ export async function generateEmoji(
       .insert({ visitor_hash: visitor, cache_key: cacheKey, cache_hit: true, model: MODEL, quality: QUALITY })
     return { ok: true, png: new Uint8Array(await cached.data.arrayBuffer()), cacheKey, cached: true, remaining: null }
   }
+  if (cacheOnly) return { ok: false, status: 404, error: 'Not generated yet', reason: 'uncached' }
 
   // 2. Reserve a slot first, then count including it, so parallel requests
   // can't all read the same count and slip past the limits. A slot over the

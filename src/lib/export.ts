@@ -51,6 +51,11 @@ export function frameTiming(anim: Animation, maxFrames: number, frameStep: numbe
   return best ?? { count, delay: Math.max(20, Math.round(anim.duration / count / 10) * 10) }
 }
 
+/** Halving a short loop can leave too few frames to show the motion; the ladder skips that step. */
+export function keepsMotion(anim: Animation, frameStep: number): boolean {
+  return frameStep === 1 || Math.ceil(anim.frames / frameStep) >= Math.max(6, anim.minFrames ?? 0)
+}
+
 async function renderFrames(
   source: HTMLCanvasElement,
   size: number,
@@ -99,6 +104,8 @@ async function encodeGifAsync(
   return r.value
 }
 
+const QUANTIZE_PIXELS = 1 << 20
+
 function* gifSteps(
   frames: Uint8ClampedArray[],
   size: number,
@@ -106,13 +113,23 @@ function* gifSteps(
   colors: number,
 ): Generator<void, Uint8Array, void> {
   // One palette for the whole loop keeps colors from flickering between frames.
-  const all = new Uint8ClampedArray(frames.length * frames[0].length)
-  frames.forEach((f, i) => all.set(f, i * f.length))
-  const palette = quantize(all, colors, { format: 'rgba4444', oneBitAlpha: true })
+  // Big exports (GIPHY, Instagram) build it from every Nth pixel of every
+  // frame, up to about a million pixels, so it doesn't block for long or use
+  // lots of memory, and every frame's colors (Party's hues) still count.
+  const pixels = size * size
+  const stride = Math.max(1, Math.ceil((frames.length * pixels) / QUANTIZE_PIXELS))
+  const perFrame = Math.ceil(pixels / stride)
+  const all = new Uint32Array(frames.length * perFrame)
+  frames.forEach((f, i) => {
+    const px = new Uint32Array(f.buffer, f.byteOffset, pixels)
+    for (let j = 0, k = i * perFrame; j < pixels; j += stride, k++) all[k] = px[j]
+  })
+  yield
+  const palette = quantize(new Uint8Array(all.buffer), colors, { format: 'rgba4444', oneBitAlpha: true })
   const transparentIndex = palette.findIndex((c) => c[3] === 0)
   const gif = GIFEncoder()
   for (let i = 0; i < frames.length; i++) {
-    if (i % 4 === 0) yield
+    if (i % 2 === 0) yield
     const index = applyPalette(frames[i], palette, 'rgba4444')
     gif.writeFrame(index, size, size, {
       palette: i === 0 ? palette : undefined,
@@ -175,8 +192,7 @@ export async function exportGif(
   for (const attempt of gifLadder(size)) {
     // A newer change replaced this export; stop instead of finishing the ladder.
     signal?.throwIfAborted()
-    // Halving a short loop leaves too few frames to show the motion; skip that step.
-    if (attempt.frameStep > 1 && Math.ceil(anim.frames / attempt.frameStep) < 6) continue
+    if (!keepsMotion(anim, attempt.frameStep)) continue
     const { count, delay } = frameTiming(anim, platform.maxFrames, attempt.frameStep)
     const key = `${attempt.size}:${count}`
     let frames = cache.get(key)

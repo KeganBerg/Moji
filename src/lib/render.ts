@@ -242,19 +242,21 @@ export function drawFrame(
     roundedRect(ctx, -dw / 2, -dh / 2, dw, dh, (corners * Math.min(dw, dh)) / 2)
     ctx.clip()
   }
-  let image: Canvas2D = source
-  if (transform.hue !== undefined) {
-    // Tint a copy only as big as it lands on screen: a 36 px thumbnail
-    // shouldn't wash a full-size upload every frame.
-    const m = ctx.getTransform()
-    const scale = Math.hypot(m.a, m.b)
-    const w = Math.min(source.width, Math.max(1, Math.ceil(dw * scale)))
-    const h = Math.min(source.height, Math.max(1, Math.ceil(dh * scale)))
-    image = tinted(source, w, h, transform.hue, transform.tint ?? TINT_STRENGTH)
-  }
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh)
+  if (transform.hue !== undefined) {
+    // Tint a copy only as big as it lands on screen: a 36 px thumbnail
+    // shouldn't wash a full-size upload every frame. Each axis is measured on
+    // its own, since Flip and Squash scale them differently.
+    const m = ctx.getTransform()
+    const w = Math.min(source.width, Math.max(1, Math.ceil(dw * Math.hypot(m.a, m.b))))
+    const h = Math.min(source.height, Math.max(1, Math.ceil(dh * Math.hypot(m.c, m.d))))
+    const tint = tinted(source, w, h, transform.hue, transform.tint ?? TINT_STRENGTH)
+    if (tint) ctx.drawImage(tint, 0, 0, w, h, -dw / 2, -dh / 2, dw, dh)
+    else ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh)
+  } else {
+    ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh)
+  }
   ctx.restore()
 }
 
@@ -265,26 +267,28 @@ let tintCanvas: Canvas2D | null = null
  * rotation) also colors black, white and grey images, and it doesn't rely on
  * canvas filters, which some browsers ignore.
  */
-function tinted(source: Canvas2D, width: number, height: number, hue: number, strength: number): Canvas2D {
+function tinted(source: Canvas2D, width: number, height: number, hue: number, strength: number): Canvas2D | null {
+  // One canvas serves every size drawn in a frame (preview, thumbnails, chat),
+  // so it only ever grows; resizing it would reallocate it several times a frame.
   tintCanvas ??= makeCanvas(1, 1)
   const c = tintCanvas
-  if (c.width !== width || c.height !== height) {
-    c.width = width
-    c.height = height
+  if (c.width < width || c.height < height) {
+    c.width = Math.max(c.width, width)
+    c.height = Math.max(c.height, height)
   }
   // A plain context: willReadFrequently would force slow software drawing every frame.
   const t = c.getContext('2d')
-  if (!t) return source
+  if (!t) return null
   t.globalCompositeOperation = 'source-over'
   t.globalAlpha = 1
-  t.clearRect(0, 0, c.width, c.height)
+  t.clearRect(0, 0, width, height)
   t.imageSmoothingEnabled = true
   t.imageSmoothingQuality = 'high'
-  t.drawImage(source, 0, 0, c.width, c.height)
+  t.drawImage(source, 0, 0, width, height)
   t.globalCompositeOperation = 'source-atop'
   t.globalAlpha = strength
   t.fillStyle = `hsl(${Math.round(((hue % 360) + 360) % 360)}, 100%, 55%)`
-  t.fillRect(0, 0, c.width, c.height)
+  t.fillRect(0, 0, width, height)
   t.globalCompositeOperation = 'source-over'
   t.globalAlpha = 1
   return c

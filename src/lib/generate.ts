@@ -19,6 +19,8 @@ export type StyleId = (typeof STYLES)[number]['id']
 export interface GenerateRequest {
   prompt: string
   style: StyleId
+  /** Only return an already-cached emoji; never spend a paid generation. */
+  cacheOnly?: boolean
 }
 
 export interface GenerateResult {
@@ -85,6 +87,14 @@ export class GenerationError extends Error {
   }
 }
 
+/** A cache-only request for a prompt nobody has generated yet. */
+export class NotCachedError extends Error {
+  readonly name = 'NotCachedError'
+  constructor() {
+    super('Not generated yet')
+  }
+}
+
 /** Calls the generate-emoji Edge Function with the project's publishable key. */
 export class SupabaseFunctionGenerator implements EmojiGenerator {
   readonly isReal = true
@@ -112,6 +122,7 @@ export class SupabaseFunctionGenerator implements EmojiGenerator {
     }
     if (!res.ok) {
       const body = await res.json().catch(() => null)
+      if (body?.reason === 'uncached') throw new NotCachedError()
       throw new GenerationError(body?.error ?? 'Generation failed. Try again.', res.status)
     }
     const remaining = res.headers.get('x-moji-remaining')

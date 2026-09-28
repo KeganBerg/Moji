@@ -13,7 +13,8 @@ const serverMessages = [sharedSrc, websiteSrc]
   .map((text) => text.replace(/\$\{[^}]+\}/g, '15'))
   .concat([...sharedSrc.matchAll(/^\s+[?:] (['"])(.+?)\1,?$/gm)].map((m) => m[2]))
   .concat([...sharedSrc.matchAll(/_MESSAGE = (['"])(.+?)\1/g)].map((m) => m[2]))
-const REQUEST_ONLY = ['Method not allowed', 'Origin not allowed']
+// 'Not generated yet' answers a Slack link's cache-only request; it's never shown.
+const REQUEST_ONLY = ['Method not allowed', 'Origin not allowed', 'Not generated yet']
 
 describe('error messages', () => {
   it('finds the server messages', () => {
