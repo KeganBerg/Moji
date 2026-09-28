@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './animations'
-import { encodeGif, frameTiming, gifLadder } from './export'
+import { encodeGif, frameTiming, gifLadder, keepsMotion } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
@@ -94,6 +94,25 @@ describe('gif sizing', () => {
     const bytes = encodeGif(frames, size, 50, 64)
     expect(new TextDecoder().decode(bytes.slice(0, 6))).toBe('GIF89a')
     expect(bytes[bytes.length - 1]).toBe(0x3b)
+  })
+})
+
+describe('halving frames', () => {
+  it('never leaves Shake on its still points', () => {
+    const shake = getAnimation('shake')
+    for (const other of ANIMATIONS.filter((a) => a.frames > 1 && a !== shake)) {
+      const without = composeAnimations([other])
+      for (let speed = SPEED.min; speed <= SPEED.max; speed += SPEED.step) {
+        const anim = withSpeed(composeAnimations([other, shake]), speed)
+        if (!keepsMotion(anim, 2)) continue
+        const { count } = frameTiming(anim, 50, 2)
+        // The shake's own offset is what's left after taking the other motion away.
+        const shakeX = Array.from({ length: count }, (_, i) =>
+          Math.abs((anim.at(i / count).x ?? 0) - (without.at(i / count).x ?? 0)),
+        )
+        expect(Math.max(...shakeX), `${anim.id} at ${speed}x`).toBeGreaterThan(0.02)
+      }
+    }
   })
 })
 

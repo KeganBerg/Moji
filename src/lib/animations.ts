@@ -25,6 +25,11 @@ export interface Animation {
   frames: number
   /** Whether the emoji needs to shrink a little so motion stays inside the canvas. */
   inset: number
+  /**
+   * Fewest frames per loop that still show the motion. Shake goes back and
+   * forth twice a loop, so too few frames land only on its still points.
+   */
+  minFrames?: number
   at(t: number): FrameTransform
 }
 
@@ -58,6 +63,7 @@ export const ANIMATIONS: Animation[] = [
     label: 'Shake',
     duration: 500,
     frames: 10,
+    minFrames: 8,
     inset: 0.88,
     at: (t) => ({ x: Math.sin(t * TAU * 2) * 0.05, rotate: Math.sin(t * TAU * 2) * 0.06 }),
   },
@@ -166,6 +172,7 @@ export function composeAnimations(list: Animation[]): Animation {
     label: moving.map((a) => a.label).join(' + '),
     duration,
     frames: Math.max(...parts.map(({ a, cycles }) => a.frames * cycles)),
+    minFrames: Math.max(...parts.map(({ a, cycles }) => (a.minFrames ?? 0) * cycles)),
     inset: Math.min(...moving.map((a) => a.inset)),
     at: (t) => {
       let rotate = 0,
@@ -208,7 +215,10 @@ export function withSpeed(anim: Animation, speed: number): Animation {
   // loops get shorter delays instead, or a quick shake lands only on its still
   // points. Among even counts near that, pick the one whose whole-10 ms delay
   // lands closest to the asked-for speed.
-  const cap = Math.max(2, Math.min(Math.max(anim.frames, Math.round(anim.frames / speed)), most, Math.floor(target / 20)))
+  const cap = Math.max(
+    2,
+    Math.min(Math.max(anim.frames, Math.round(anim.frames / speed)), most, Math.floor(target / 20)),
+  )
   let frames = 2
   let delay = Math.max(20, Math.round(target / 2 / 10) * 10)
   let bestError = Infinity
@@ -230,6 +240,9 @@ export const INTENSITY = { min: 0.25, max: 2, step: 0.25, default: 1 }
 /** Motions built from whole turns, which would break the loop if scaled. */
 const WHOLE_TURNS = new Set(['spin', 'flip'])
 
+/** Whether the Intensity slider changes this motion. */
+export const takesIntensity = (id: string) => !WHOLE_TURNS.has(id)
+
 /**
  * Makes a motion gentler or stronger: offsets, rotation and stretch scale by
  * `amount`, and Party's color wash gets lighter or heavier. The inset grows
@@ -240,7 +253,10 @@ export function withIntensity(anim: Animation, amount: number): Animation {
   const turns = WHOLE_TURNS.has(anim.id)
   return {
     ...anim,
-    inset: turns ? anim.inset : Math.max(0.5, 1 - (1 - anim.inset) * amount),
+    // Swing's reach grows faster than its angle (it hangs from a pivot), so it shrinks more.
+    inset: turns
+      ? anim.inset
+      : Math.max(0.5, 1 - (1 - anim.inset) * amount * (anim.id === 'swing' && amount > 1 ? 1.3 : 1)),
     at: (t) => {
       const f = anim.at(t)
       if (turns) return f

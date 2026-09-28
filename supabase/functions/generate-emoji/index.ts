@@ -6,6 +6,7 @@
 //                             (mojilocker.netlify.app and its previews are always allowed)
 
 import { adminClient, cleanPrompt, generateEmoji, sha256 } from '../_shared/generate.ts'
+import { limitKey } from './network.ts'
 
 const ALLOWED_ORIGINS = (
   Deno.env.get('ALLOWED_ORIGINS') ??
@@ -53,9 +54,12 @@ Deno.serve(async (req) => {
     req.headers.get('x-real-ip')?.trim() ||
     (req.headers.get('x-forwarded-for') ?? '').split(',').at(-1)?.trim() ||
     'unknown'
-  const visitor = await sha256(`${ip}|${day}`)
+  const visitor = await sha256(`${limitKey(ip)}|${day}`)
+  // Links from the Slack app only ever show an emoji that's already cached, so
+  // a link someone else crafted can't spend the visitor's paid generations.
+  const cacheOnly = body.cacheOnly === true
 
-  const out = await generateEmoji(adminClient(), visitor, subject, style)
+  const out = await generateEmoji(adminClient(), visitor, subject, style, { cacheOnly })
   if (!out.ok) return json({ error: out.error, reason: out.reason }, out.status, headers)
 
   return new Response(out.png, {

@@ -43,7 +43,8 @@ async function verify(req: Request, body: string): Promise<boolean> {
   const signature = req.headers.get('x-slack-signature') ?? ''
   if (!secret || !timestamp || !signature) return false
   // Reject replays older than five minutes.
-  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 60 * 5) return false
+  const sent = Number(timestamp)
+  if (!Number.isFinite(sent) || Math.abs(Date.now() / 1000 - sent) > 60 * 5) return false
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
     'sign',
   ])

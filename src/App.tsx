@@ -33,6 +33,7 @@ import {
   SPEED,
   composeAnimations,
   getAnimation,
+  takesIntensity,
   withIntensity,
   withSpeed,
 } from './lib/animations'
@@ -45,7 +46,7 @@ import {
   setAutoSave,
   type GalleryItem,
 } from './lib/gallery'
-import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
+import { MAX_PROMPT, STYLES, NotCachedError, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_STRENGTH } from './lib/cutout'
 import { useSeason } from './lib/season'
@@ -148,7 +149,8 @@ function Editor() {
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
-  const [exported, setExported] = useState<{ key: object; result: ExportResult } | null>(null)
+  // result is null when that export failed, so the status doesn't stay on Sizing forever.
+  const [exported, setExported] = useState<{ key: object; result: ExportResult | null } | null>(null)
   const [error, setError] = useState<UiError | null>(null)
 
   const [gallery, setGallery] = useState<GalleryItem[]>([])
@@ -249,13 +251,15 @@ function Editor() {
     })
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
   const result = exported?.key === exportKey ? exported.result : null
-  const exporting = !!source && !result
+  const exporting = !!source && exported?.key !== exportKey
   const emojiName = sanitizeName(name || active?.name || 'moji', platformId)
   const extension = animation.frames > 1 ? 'gif' : 'png'
   const fileName = `${emojiName}.${extension}`
 
-  const addImage = useCallback(async (blob: Blob, suggestedName: string, fromUpload: boolean) => {
+  const addImage = useCallback(async (blob: Blob, suggestedName: string, fromUpload: boolean, signal?: AbortSignal) => {
     const image = await loadImage(blob)
+    // Start over while the image was loading.
+    signal?.throwIfAborted()
     // Uploads on a plain background (a moon on black, a logo on white) get cut out
     // automatically. Generated images already come with a transparent background.
     const cutout = fromUpload && looksCuttable(image)
@@ -293,7 +297,7 @@ function Editor() {
     [addImage],
   )
 
-  const generate = async () => {
+  const generate = async (cacheOnly = false) => {
     const text = prompt.trim()
     if (!text || generating) return
     abortRef.current?.abort()
@@ -302,11 +306,12 @@ function Editor() {
     setGenerating(true)
     setError(null)
     try {
-      const out = await generator.generate({ prompt: text, style }, controller.signal)
+      const out = await generator.generate({ prompt: text, style, cacheOnly }, controller.signal)
       if (out.remaining !== null) setRemaining(out.remaining)
-      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false)
+      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false, controller.signal)
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') setError(toUiError(e))
+      // A linked prompt that isn't cached just stays in the box for the visitor to run.
+      if (!(e instanceof NotCachedError) && (e as Error).name !== 'AbortError') setError(toUiError(e))
     } finally {
       if (abortRef.current === controller) setGenerating(false)
     }
@@ -314,8 +319,9 @@ function Editor() {
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
-  // Links from the Slack app open with that emoji already generated; it's a
-  // cache hit, so it's free and doesn't use up the limit.
+  // Links from the Slack app open with that emoji already generated. The
+  // request is cache-only, so a crafted link can't spend the visitor's paid
+  // generations; an uncached prompt is left in the box instead.
   const linkedRun = useRef(false)
   const generateRef = useRef(generate)
   useEffect(() => {
@@ -325,7 +331,7 @@ function Editor() {
     if (!linked || linkedRun.current) return
     linkedRun.current = true
     window.history.replaceState(null, '', window.location.pathname)
-    generateRef.current()
+    generateRef.current(true)
   }, [linked])
 
   // Pasting an image anywhere loads it.
@@ -351,7 +357,9 @@ function Editor() {
             : await exportPng(source, platform.size, options, platform, controller.signal)
         if (!cancelled) setExported({ key: exportKey, result: out })
       } catch (e) {
-        if (!cancelled) setError(toUiError(e))
+        if (cancelled) return
+        setError(toUiError(e))
+        setExported({ key: exportKey, result: null })
       }
     }, 200)
     return () => {
@@ -562,7 +570,7 @@ function Editor() {
           <div className="composer-wrap">
             {history.length > 0 && (
               <div className="history-row">
-                <div className="history" aria-label={t('recentImages')}>
+                <div className="history" role="group" aria-label={t('recentImages')}>
                   {history.map((h) => (
                     <button
                       key={h.id}
@@ -764,7 +772,7 @@ function Editor() {
                   <output aria-hidden>{speed.toLocaleString(`${lang}-u-nu-latn`)}×</output>
                 </label>
               )}
-              {motionIds.length > 0 && !platform.staticOnly && (
+              {motionIds.some(takesIntensity) && !platform.staticOnly && (
                 <label className="setting speed">
                   <span>{t('intensity')}</span>
                   <input
@@ -843,6 +851,7 @@ function Editor() {
                   step={0.02}
                   value={1 - padding * 2}
                   onChange={(e) => setPadding(Math.round((1 - Number(e.target.value)) * 50) / 100)}
+                  onDoubleClick={() => setPadding(DEFAULT_RENDER.padding)}
                   aria-valuetext={`${Math.round((1 - padding * 2) * 100)}%`}
                 />
                 <output aria-hidden>{Math.round((1 - padding * 2) * 100)}%</output>
@@ -976,7 +985,11 @@ function Editor() {
                 </div>
               </label>
 
-              <div className={`status${result ? (result.withinLimit ? ' is-ok' : ' is-over') : ''}`} aria-live="polite">
+              {/* A sticker the destination would reject isn't "Ready", even when it's under the size limit. */}
+              <div
+                className={`status${result ? (result.withinLimit && !stickerIssue ? ' is-ok' : ' is-over') : ''}`}
+                aria-live="polite"
+              >
                 {!source ? (
                   t('addImageToExport')
                 ) : exporting || !result ? (
@@ -989,7 +1002,7 @@ function Editor() {
                   <>
                     <span className="status-dot" />
                     <span>
-                      {result.withinLimit ? t('ready') : t('overLimit')} ·{' '}
+                      {!result.withinLimit ? `${t('overLimit')} · ` : !stickerIssue ? `${t('ready')} · ` : ''}
                       {isolate(`${result.size}×${result.size} ${result.extension.toUpperCase()}`)} ·{' '}
                       {t('sizeOf', {
                         size: isolate(formatBytes(result.bytes)),
@@ -1006,7 +1019,13 @@ function Editor() {
                 </p>
               )}
 
-              <button type="button" className="primary" onClick={download} disabled={!source}>
+              <button
+                type="button"
+                className="primary"
+                onClick={download}
+                disabled={!source}
+                aria-label={t('downloadFile', { file: `${emojiName}.${extension}` })}
+              >
                 <Download size={16} aria-hidden />
                 <DownloadLabel text={t('downloadFile', { file: '\u0000' })} base={emojiName} extension={extension} />
               </button>
