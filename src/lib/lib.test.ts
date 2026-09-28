@@ -27,9 +27,15 @@ describe('platform presets', () => {
     expect(PLATFORMS.slack).toMatchObject({ size: 128, maxBytes: 131072, maxFrames: 50 })
     expect(PLATFORMS.discord).toMatchObject({ size: 128, maxBytes: 262144 })
   })
+  it('exports GIPHY stickers as animated GIFs and Instagram stickers as large stills', () => {
+    expect(PLATFORMS.giphy).toMatchObject({ size: 480, stickerRules: true })
+    expect(PLATFORMS.giphy.size % 4).toBe(0)
+    expect(PLATFORMS.instagram).toMatchObject({ size: 1024, staticOnly: true })
+  })
   it('formats bytes', () => {
     expect(formatBytes(512)).toBe('512\u00a0B')
     expect(formatBytes(131072)).toBe('128\u00a0KB')
+    expect(formatBytes(8 * 1024 * 1024)).toBe('8\u00a0MB')
   })
 })
 
