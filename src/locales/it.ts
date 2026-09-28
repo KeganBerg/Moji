@@ -70,7 +70,7 @@ const it: Messages = {
   framing: 'Inquadratura',
   fit: 'Adatta',
   fill: 'Riempi',
-  padding: 'Margine',
+  scale: 'Scala',
   corners: 'Angoli',
   rotate: 'Rotazione',
   turn: 'Gira',

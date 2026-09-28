@@ -70,7 +70,7 @@ const pt: Messages = {
   framing: 'Enquadramento',
   fit: 'Encaixar',
   fill: 'Preencher',
-  padding: 'Margem',
+  scale: 'Escala',
   corners: 'Cantos',
   rotate: 'Rotação',
   turn: 'Girar',

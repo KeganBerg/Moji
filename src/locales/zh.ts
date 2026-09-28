@@ -70,7 +70,7 @@ const zh: Messages = {
   framing: '画面适配',
   fit: '完整显示',
   fill: '填满',
-  padding: '留白',
+  scale: '缩放',
   corners: '圆角',
   rotate: '旋转',
   turn: '方向',

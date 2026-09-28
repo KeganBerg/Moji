@@ -70,7 +70,7 @@ const ru: Messages = {
   framing: 'Кадрирование',
   fit: 'Вписать',
   fill: 'Заполнить',
-  padding: 'Отступ',
+  scale: 'Масштаб',
   corners: 'Скругление',
   rotate: 'Поворот',
   turn: 'Ориентация',

@@ -70,7 +70,7 @@ const id: Messages = {
   framing: 'Pembingkaian',
   fit: 'Muat',
   fill: 'Penuhi',
-  padding: 'Jarak tepi',
+  scale: 'Skala',
   corners: 'Sudut',
   rotate: 'Rotasi',
   turn: 'Putar',

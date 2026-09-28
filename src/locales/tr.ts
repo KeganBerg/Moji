@@ -70,7 +70,7 @@ const tr: Messages = {
   framing: 'Çerçeveleme',
   fit: 'Sığdır',
   fill: 'Doldur',
-  padding: 'Kenar boşluğu',
+  scale: 'Ölçek',
   corners: 'Köşeler',
   rotate: 'Döndür',
   turn: 'Yön',

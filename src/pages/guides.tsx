@@ -500,7 +500,7 @@ export const GUIDES: Guide[] = [
             With Remove on, raise or lower <strong>Strength</strong> until the edges look right.
           </li>
           <li>
-            Set <strong>Framing</strong> to <strong>Fill</strong> and keep Padding low so the subject fills the square.
+            Set <strong>Framing</strong> to <strong>Fill</strong> and raise Scale so the subject fills the square.
             Crop tight to the face or object. A whole body or room is too small to see.
           </li>
           <li>

@@ -70,7 +70,7 @@ const de: Messages = {
   framing: 'Bildausschnitt',
   fit: 'Einpassen',
   fill: 'Füllen',
-  padding: 'Rand',
+  scale: 'Skalierung',
   corners: 'Ecken',
   rotate: 'Drehen',
   turn: 'Drehen & Spiegeln',

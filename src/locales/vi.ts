@@ -70,7 +70,7 @@ const vi: Messages = {
   framing: 'Căn khung',
   fit: 'Vừa khung',
   fill: 'Lấp đầy',
-  padding: 'Lề',
+  scale: 'Tỷ lệ',
   corners: 'Bo góc',
   rotate: 'Xoay',
   turn: 'Xoay/lật',
