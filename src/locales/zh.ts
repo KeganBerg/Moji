@@ -48,6 +48,7 @@ const zh: Messages = {
   specFrames: 'GIF 最多 {n} 帧',
   motion: '动效',
   motionHint: '选一个，或组合几个',
+  speed: '速度',
   motionNone: '静态',
   motionSpin: '旋转',
   motionBounce: '弹跳',

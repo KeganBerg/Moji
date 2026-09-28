@@ -48,6 +48,7 @@ const ja: Messages = {
   specFrames: 'GIF は最大 {n} フレーム',
   motion: '動き',
   motionHint: '1 つ選ぶか、いくつか組み合わせてください',
+  speed: '速度',
   motionNone: '静止',
   motionSpin: '回転',
   motionBounce: 'バウンド',

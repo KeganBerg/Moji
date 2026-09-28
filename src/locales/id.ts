@@ -48,6 +48,7 @@ const id: Messages = {
   specFrames: 'GIF hingga {n} frame',
   motion: 'Gerakan',
   motionHint: 'Pilih satu atau gabungkan beberapa',
+  speed: 'Kecepatan',
   motionNone: 'Statis',
   motionSpin: 'Putar',
   motionBounce: 'Pantul',

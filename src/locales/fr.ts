@@ -48,6 +48,7 @@ const fr: Messages = {
   specFrames: 'GIF jusqu’à {n} images',
   motion: 'Animation',
   motionHint: 'Choisissez-en une ou combinez-en plusieurs',
+  speed: 'Vitesse',
   motionNone: 'Statique',
   motionSpin: 'Tourner',
   motionBounce: 'Rebondir',
