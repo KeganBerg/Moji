@@ -7,7 +7,7 @@
     "name": "Moji Locker",
     "description": "Make custom emoji for your workspace with /moji.",
     "background_color": "#16161a",
-    "long_description": "Type /moji and describe an emoji, like /moji a taco wearing sunglasses. Moji Locker draws it, sizes it to Slack's 128 x 128 limits, and replies privately with a download ready to add from the emoji picker. Start with a style word to change the look: /moji pixel a happy ghost. For motion, text and uploads, visit moji.locker."
+    "long_description": "Type /moji [prompt] to describe an emoji. Moji Locker draws it, sizes it to Slack's 128 x 128 limits, and replies privately with a download ready to add from the emoji picker. Start with a style word to change the look: /moji pixel a happy ghost. For motion, text and uploads, visit moji.locker."
   },
   "features": {
     "bot_user": {
