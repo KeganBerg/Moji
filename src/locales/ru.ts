@@ -105,6 +105,7 @@ const ru: Messages = {
   motionStill: 'Стикеры {platform} неподвижны',
   giphyNeedsMotion: 'GIPHY принимает только анимированные стикеры. Выберите движение.',
   giphyNeedsClear: 'Для GIPHY нужен прозрачный фон. Уберите цвет заливки.',
+  giphyNeedsSpace: 'GIPHY требует, чтобы не менее 20% стикера было прозрачным. Уменьшите масштаб или уберите фон.',
   copySticker: 'Копировать стикер',
   stickerCopied: 'Скопировано',
   postToGiphy: 'Опубликовать в GIPHY',

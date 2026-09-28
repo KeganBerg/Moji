@@ -105,6 +105,8 @@ const pt: Messages = {
   motionStill: 'Figurinhas do {platform} são estáticas',
   giphyNeedsMotion: 'O GIPHY só aceita figurinhas animadas. Escolha um movimento.',
   giphyNeedsClear: 'O GIPHY exige fundo transparente. Remova a cor de preenchimento.',
+  giphyNeedsSpace:
+    'O GIPHY exige que pelo menos 20% da figurinha seja transparente. Diminua a escala ou remova o fundo.',
   copySticker: 'Copiar figurinha',
   stickerCopied: 'Copiada',
   postToGiphy: 'Publicar no GIPHY',

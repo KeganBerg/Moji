@@ -105,6 +105,7 @@ const vi: Messages = {
   motionStill: 'Nhãn dán {platform} không chuyển động',
   giphyNeedsMotion: 'GIPHY chỉ nhận nhãn dán động. Hãy chọn một chuyển động.',
   giphyNeedsClear: 'GIPHY cần nền trong suốt. Hãy bỏ màu tô.',
+  giphyNeedsSpace: 'GIPHY cần ít nhất 20% nhãn dán trong suốt. Hãy giảm tỷ lệ hoặc xóa nền.',
   copySticker: 'Sao chép nhãn dán',
   stickerCopied: 'Đã sao chép',
   postToGiphy: 'Đăng lên GIPHY',

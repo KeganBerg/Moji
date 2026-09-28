@@ -105,6 +105,7 @@ const ar: Messages = {
   motionStill: 'ملصقات {platform} ثابتة',
   giphyNeedsMotion: 'لا يقبل GIPHY إلا الملصقات المتحركة. اختر حركة.',
   giphyNeedsClear: 'يتطلب GIPHY خلفية شفافة. أزِل لون التعبئة.',
+  giphyNeedsSpace: 'يتطلب GIPHY أن يكون 20% على الأقل من الملصق شفافًا. قلّل التحجيم أو أزِل الخلفية.',
   copySticker: 'نسخ الملصق',
   stickerCopied: 'تم النسخ',
   postToGiphy: 'النشر على GIPHY',

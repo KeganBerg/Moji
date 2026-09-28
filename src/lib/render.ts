@@ -52,8 +52,8 @@ export function rotatedSize(w: number, h: number, degrees: number): { w: number;
   return { w: w * cos + h * sin, h: w * sin + h * cos }
 }
 
-/** Largest side kept after loading. Bigger sources only slow down per-frame drawing. */
-const WORKING_SIZE = 512
+/** Largest side kept after loading, unless the export is bigger. Bigger sources only slow down per-frame drawing. */
+export const WORKING_SIZE = 512
 
 type Canvas2D = HTMLCanvasElement
 
@@ -108,11 +108,13 @@ export function prepareSource(
   trim: boolean,
   /** Background removal strength, or null to keep the full image. */
   cutout: number | null = null,
+  /** Largest side to keep; raise it for exports bigger than WORKING_SIZE so they aren't upscaled. */
+  maxSize = WORKING_SIZE,
 ): Canvas2D {
   let w = img.width
   let h = img.height
   let current: CanvasImageSource = img
-  while (Math.max(w, h) / 2 >= WORKING_SIZE) {
+  while (Math.max(w, h) / 2 >= maxSize) {
     w = Math.round(w / 2)
     h = Math.round(h / 2)
     const step = makeCanvas(w, h)
@@ -121,7 +123,7 @@ export function prepareSource(
     sctx.drawImage(current, 0, 0, w, h)
     current = step
   }
-  const scale = Math.min(1, WORKING_SIZE / Math.max(w, h))
+  const scale = Math.min(1, maxSize / Math.max(w, h))
   const out = makeCanvas(w * scale, h * scale)
   const octx = ctx2d(out)
   octx.imageSmoothingQuality = 'high'
@@ -164,6 +166,27 @@ function snapAlpha(ctx: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /** Draws one frame of the emoji into ctx at size × size. */
+/**
+ * Share of a rendered frame that is see-through (GIPHY rejects stickers whose
+ * first frame is under 20% clear). Measured on a small render; pixels under
+ * half alpha count as clear, as they do in the exported GIF.
+ */
+export function transparentShare(
+  source: Canvas2D,
+  opts: RenderOptions,
+  transform: FrameTransform,
+  inset: number,
+  size = 96,
+): number {
+  const canvas = makeCanvas(size, size)
+  const ctx = ctx2d(canvas)
+  drawFrame(ctx, source, size, opts, transform, inset)
+  const data = ctx.getImageData(0, 0, size, size).data
+  let clear = 0
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 128) clear++
+  return clear / (size * size)
+}
+
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
   source: Canvas2D,

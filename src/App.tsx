@@ -27,7 +27,15 @@ import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
-import { ANIMATIONS, INTENSITY, SPEED, composeAnimations, getAnimation, withIntensity, withSpeed } from './lib/animations'
+import {
+  ANIMATIONS,
+  INTENSITY,
+  SPEED,
+  composeAnimations,
+  getAnimation,
+  withIntensity,
+  withSpeed,
+} from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
@@ -41,7 +49,16 @@ import { MAX_PROMPT, STYLES, getGenerator, type StyleId } from './lib/generate'
 import { PLATFORMS, formatBytes, sanitizeName, type PlatformId } from './lib/platforms'
 import { DEFAULT_STRENGTH } from './lib/cutout'
 import { useSeason } from './lib/season'
-import { DEFAULT_RENDER, loadImage, looksCuttable, prepareSource, type Fit, type RenderOptions } from './lib/render'
+import {
+  DEFAULT_RENDER,
+  WORKING_SIZE,
+  loadImage,
+  looksCuttable,
+  prepareSource,
+  transparentShare,
+  type Fit,
+  type RenderOptions,
+} from './lib/render'
 import { DEFAULT_TUNE, TUNE_CONTROLS, applyTune, isNeutral, type Tune } from './lib/tune'
 import { I18nProvider } from './components/I18nProvider'
 import { NumberField } from './components/NumberField'
@@ -168,9 +185,12 @@ function Editor() {
     () => ({ fit, padding, background, rotation, flip, corners }),
     [fit, padding, background, rotation, flip, corners],
   )
+  // Keep enough pixels for big exports (Instagram's 1024 px) so they aren't upscaled.
+  const workingSize = Math.max(WORKING_SIZE, platform.size)
   const prepared = useMemo(
-    () => (active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null) : null),
-    [active, trim],
+    () =>
+      active ? prepareSource(active.image, trim, active.cutout ? active.cutoutStrength : null, workingSize) : null,
+    [active, trim, workingSize],
   )
   const updateActive = (patch: Partial<HistoryItem>) =>
     setHistory((h) => h.map((item) => (item.id === activeId ? { ...item, ...patch } : item)))
@@ -405,13 +425,20 @@ function Editor() {
     window.open('https://giphy.com/upload', '_blank', 'noopener')
     download()
   }
-  // What GIPHY would reject: a still image, or a solid background.
+  // What GIPHY would reject: a still image, a solid background, or a first
+  // frame less than 20% see-through (a full-bleed photo, say).
+  const clearShare = useMemo(
+    () => (platform.stickerRules && source ? transparentShare(source, options, animation.at(0), animation.inset) : 1),
+    [platform.stickerRules, source, options, animation],
+  )
   const stickerIssue = platform.stickerRules
     ? animation.frames < 2
       ? t('giphyNeedsMotion')
       : background !== null
         ? t('giphyNeedsClear')
-        : null
+        : clearShare < 0.2
+          ? t('giphyNeedsSpace')
+          : null
     : null
 
   const deleteSaved = async (item: GalleryItem) => {
@@ -691,30 +718,33 @@ function Editor() {
                       : t('motionHint')}
                 </span>
               </div>
-              <div className="motions" role="group" aria-label={t('motion')}>
-                {motionThumbs.map((a) => {
-                  const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      aria-pressed={on}
-                      className={`motion${on ? ' is-active' : ''}`}
-                      onClick={() => toggleMotion(a.id)}
-                    >
-                      <span className="motion-thumb">
-                        {source ? (
-                          <EmojiCanvas source={source} animation={a} options={options} size={36} decorative />
-                        ) : (
-                          <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
-                        )}
-                      </span>
-                      <span>{t(motionKey(a.id))}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              {motionIds.length > 0 && (
+              {/* Instagram stickers are stills, so there's nothing to pick. */}
+              {!platform.staticOnly && (
+                <div className="motions" role="group" aria-label={t('motion')}>
+                  {motionThumbs.map((a) => {
+                    const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        aria-pressed={on}
+                        className={`motion${on ? ' is-active' : ''}`}
+                        onClick={() => toggleMotion(a.id)}
+                      >
+                        <span className="motion-thumb">
+                          {source ? (
+                            <EmojiCanvas source={source} animation={a} options={options} size={36} decorative />
+                          ) : (
+                            <span className="motion-dot" style={{ animationName: `demo-${a.id}` }} />
+                          )}
+                        </span>
+                        <span>{t(motionKey(a.id))}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {motionIds.length > 0 && !platform.staticOnly && (
                 <label className="setting speed">
                   <span>{t('speed')}</span>
                   <input
@@ -730,7 +760,7 @@ function Editor() {
                   <output aria-hidden>{speed}×</output>
                 </label>
               )}
-              {motionIds.length > 0 && (
+              {motionIds.length > 0 && !platform.staticOnly && (
                 <label className="setting speed">
                   <span>{t('intensity')}</span>
                   <input
@@ -994,16 +1024,21 @@ function Editor() {
                   </button>
                 )}
                 {platform.id === 'giphy' && (
-                  <button type="button" className="text-button share-button" onClick={postToGiphy} disabled={!result}>
+                  <button
+                    type="button"
+                    className="text-button share-button"
+                    onClick={postToGiphy}
+                    disabled={!result || !!stickerIssue}
+                  >
                     <ExternalLink size={14} aria-hidden />
                     {t('postToGiphy')}
                   </button>
                 )}
               </div>
               {platform.id === 'instagram' && (
-                <p className="hint">{t(canCopy ? 'instagramHint' : 'instagramSaveHint')}</p>
+                <p className="hint is-howto">{t(canCopy ? 'instagramHint' : 'instagramSaveHint')}</p>
               )}
-              {platform.id === 'giphy' && <p className="hint">{t('giphyHint')}</p>}
+              {platform.id === 'giphy' && <p className="hint is-howto">{t('giphyHint')}</p>}
             </div>
           </section>
         </div>
