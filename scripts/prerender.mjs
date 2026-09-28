@@ -33,10 +33,12 @@ for (const key of pages) {
 // Netlify serves 404.html with a 404 status for any path that has no file.
 {
   const { description, html } = render(NOT_FOUND)
-  const page = fill(template, { description, url: SITE, body: html }).replace(
-    '</head>',
-    '  <meta name="robots" content="noindex" />\n  </head>',
-  )
+  // No canonical or og:url: this page isn't the home page and shouldn't be indexed.
+  const page = fill(template, { description, url: SITE, body: html })
+    .replace(/\s*<link rel="canonical"[^>]*>/, '')
+    .replace(/\s*<meta property="og:url"[^>]*>/, '')
+    .replace('</head>', '  <meta name="robots" content="noindex" />\n  </head>')
+  if (page.includes('rel="canonical"')) throw new Error('404 page still has a canonical')
   if (!page.includes('noindex')) throw new Error('404 page is missing noindex')
   await writeFile(join(dist, '404.html'), page)
 }

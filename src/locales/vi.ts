@@ -11,6 +11,10 @@ const vi: Messages = {
   halloweenOff: 'Tắt giao diện Halloween',
 
   emojiPreview: 'Xem trước emoji',
+
+  pauseAnimations: 'Tạm dừng hiệu ứng động',
+
+  playAnimations: 'Phát hiệu ứng động',
   dropTitle: 'Thả ảnh vào đây, hoặc mô tả một ảnh bên dưới',
   dropFormats: 'PNG, JPG, GIF hoặc WebP. Dán ảnh cũng được.',
   generating: 'Đang tạo',

@@ -11,6 +11,10 @@ const de: Messages = {
   halloweenOff: 'Halloween-Design ausschalten',
 
   emojiPreview: 'Emoji-Vorschau',
+
+  pauseAnimations: 'Animationen pausieren',
+
+  playAnimations: 'Animationen abspielen',
   dropTitle: 'Bild hierher ziehen oder unten beschreiben',
   dropFormats: 'PNG, JPG, GIF oder WebP. Einfügen funktioniert auch.',
   generating: 'Wird generiert',

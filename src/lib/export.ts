@@ -51,17 +51,23 @@ export function frameTiming(anim: Animation, maxFrames: number, frameStep: numbe
   return best ?? { count, delay: Math.max(20, Math.round(anim.duration / count / 10) * 10) }
 }
 
-function renderFrames(
+async function renderFrames(
   source: HTMLCanvasElement,
   size: number,
   opts: RenderOptions,
   anim: Animation,
   count: number,
-): Uint8ClampedArray[] {
+  signal?: AbortSignal,
+): Promise<Uint8ClampedArray[]> {
   const canvas = makeCanvas(size, size)
   const ctx = ctx2d(canvas)
   const frames: Uint8ClampedArray[] = []
   for (let i = 0; i < count; i++) {
+    // Yield now and then so input stays responsive and a newer change can cancel this one.
+    if (signal && i > 0 && i % 6 === 0) {
+      await new Promise((r) => setTimeout(r, 0))
+      signal.throwIfAborted()
+    }
     drawFrame(ctx, source, size, opts, anim.at(i / count), anim.inset)
     frames.push(ctx.getImageData(0, 0, size, size).data)
   }
@@ -142,7 +148,7 @@ export async function exportGif(
     const key = `${attempt.size}:${count}`
     let frames = cache.get(key)
     if (!frames) {
-      frames = renderFrames(source, attempt.size, opts, anim, count)
+      frames = await renderFrames(source, attempt.size, opts, anim, count, signal)
       cache.set(key, frames)
     }
     const bytes = encodeGif(frames, attempt.size, delay, attempt.colors)

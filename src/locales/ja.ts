@@ -11,6 +11,10 @@ const ja: Messages = {
   halloweenOff: 'ハロウィンテーマをオフにする',
 
   emojiPreview: '絵文字のプレビュー',
+
+  pauseAnimations: 'アニメーションを一時停止',
+
+  playAnimations: 'アニメーションを再生',
   dropTitle: '画像をドロップするか、下で説明を入力',
   dropFormats: 'PNG、JPG、GIF、WebP に対応。貼り付けもできます。',
   generating: '生成中',

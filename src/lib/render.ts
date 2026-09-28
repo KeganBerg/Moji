@@ -1,5 +1,5 @@
 import type { FrameTransform } from './animations'
-import { removeBackground, suggestCutout } from './cutout'
+import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 
 export type Fit = 'contain' | 'cover'
 
@@ -203,7 +203,9 @@ function tinted(source: Canvas2D, hue: number): Canvas2D {
     c.width = source.width
     c.height = source.height
   }
-  const t = ctx2d(c)
+  // A plain context: willReadFrequently would force slow software drawing every frame.
+  const t = c.getContext('2d')
+  if (!t) return source
   t.globalCompositeOperation = 'source-over'
   t.globalAlpha = 1
   t.clearRect(0, 0, c.width, c.height)
@@ -225,7 +227,14 @@ export function looksCuttable(img: CanvasImageSource & { width: number; height: 
   const c = makeCanvas(img.width * scale, img.height * scale)
   const ctx = ctx2d(c)
   ctx.drawImage(img, 0, 0, c.width, c.height)
-  return suggestCutout(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height)
+  const d = ctx.getImageData(0, 0, c.width, c.height).data
+  if (!suggestCutout(d, c.width, c.height)) return false
+  // Try it: a one-color image or a full-bleed tile would be erased entirely.
+  removeBackground(d, c.width, c.height, DEFAULT_STRENGTH)
+  let kept = 0
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
+  const share = kept / (c.width * c.height)
+  return share >= 0.03 && share <= 0.9
 }
 
 export { makeCanvas, ctx2d }

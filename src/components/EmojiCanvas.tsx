@@ -22,7 +22,8 @@ export function EmojiCanvas({ source, animation, options, size, className, label
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const px = Math.round(size * (window.devicePixelRatio || 1))
+    // Past 2x the extra pixels aren't visible but cost a lot to redraw every frame.
+    const px = Math.round(size * Math.min(window.devicePixelRatio || 1, 2))
     canvas.width = canvas.height = px
     const ctx = canvas.getContext('2d')
     if (!ctx) return

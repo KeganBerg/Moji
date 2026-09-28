@@ -11,6 +11,10 @@ const hi: Messages = {
   halloweenOff: 'हैलोवीन थीम बंद करें',
 
   emojiPreview: 'इमोजी प्रीव्यू',
+
+  pauseAnimations: 'एनिमेशन रोकें',
+
+  playAnimations: 'एनिमेशन चलाएँ',
   dropTitle: 'कोई इमेज यहां ड्रॉप करें, या नीचे किसी इमेज का वर्णन करें',
   dropFormats: 'PNG, JPG, GIF या WebP। पेस्ट भी कर सकते हैं।',
   generating: 'बन रहा है',
