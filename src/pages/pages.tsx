@@ -5,6 +5,7 @@ import { FEEDBACK_URL, SUPPORT_EMAIL, SUPPORT_URL } from '../lib/site'
 import { GUIDE_PAGES } from './guides'
 
 const UPDATED = 'September 27, 2026'
+const PRIVACY_UPDATED = 'September 28, 2026'
 
 export interface Page {
   /** Meta description, about 150 characters. */
@@ -117,7 +118,7 @@ const BASE_PAGES: Record<string, Page> = {
     description:
       'What Moji Locker collects: uploads stay in your browser, and AI descriptions are sent to OpenAI but not stored.',
     heading: 'Privacy',
-    lede: <>Moji Locker is built to need as little of your data as possible. Last updated {UPDATED}.</>,
+    lede: <>Moji Locker is built to need as little of your data as possible. Last updated {PRIVACY_UPDATED}.</>,
     body: (
       <>
         <h2>Images you upload</h2>
@@ -137,6 +138,8 @@ const BASE_PAGES: Record<string, Page> = {
           creates the image. OpenAI handles that request under its API terms and does not use API data to train its
           models by default. We don't store your description. We store the generated image in a private cache, keyed by
           a one-way hash of the description and style, so the same request can be answered without generating it again.
+          Every description is also checked by OpenAI's moderation model first, and blocked descriptions are not
+          generated.
         </p>
         <h2>Usage limits</h2>
         <p>
@@ -144,37 +147,70 @@ const BASE_PAGES: Record<string, Page> = {
           The raw IP address is never stored, and the hash changes every day, so it can't be used to follow you over
           time.
         </p>
+        <h2>Server logs</h2>
+        <p>
+          Like any website, our hosting providers (Netlify and Supabase) briefly keep standard request logs, which
+          include IP addresses, for security and troubleshooting. We don't use them to identify or track visitors.
+        </p>
         <h2>Slack app</h2>
         <p>
           When you use /moji in Slack, Slack sends us your description plus your workspace and user IDs. The description
           is handled like any other generation. The IDs are combined with the date and hashed to enforce daily limits;
-          the raw IDs are not stored. The finished emoji is kept in our private storage so the download link works for 7
-          days. The app can't read your messages or channels.
+          the raw IDs are not stored. The finished emoji is kept in our private storage, and its download link expires
+          after 7 days. Installing the app doesn't give us a token we keep, and the app can't read your messages or
+          channels.
         </p>
         <h2>Analytics</h2>
         <p>
-          We may use Cloudflare Web Analytics to count visits. It uses no cookies, collects no personal data and doesn't
-          track you across sites.
+          We don't currently run analytics. If we ever turn on Cloudflare Web Analytics to count visits, it uses no
+          cookies and collects no personal data.
         </p>
-        <h2>Ads</h2>
+        <h2>Ads and cookies</h2>
         <p>
-          If we show ads, the ad provider (such as Google AdSense) may use cookies to show and measure ads, and in some
-          regions you'll be asked for consent first. You can manage Google's ad personalization at{' '}
+          Moji Locker is free because it shows ads from Google AdSense. Moji Locker itself doesn't set cookies, but
+          Google and its partners, as third-party vendors, use cookies to serve ads based on your prior visits to this
+          and other websites, and to measure them. Google's advertising cookies let it and its partners show you ads
+          based on those visits. In the EEA, the UK and Switzerland you're asked for consent before personalized ads are
+          shown.
+        </p>
+        <p>
+          You can opt out of personalized advertising in{' '}
           <a href="https://adssettings.google.com" target="_blank" rel="noreferrer">
-            adssettings.google.com
+            Google's Ads Settings
+          </a>{' '}
+          or, for other vendors, at{' '}
+          <a href="https://www.aboutads.info/choices" target="_blank" rel="noreferrer">
+            aboutads.info
+          </a>
+          . Google explains how it uses data from sites that show its ads at{' '}
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">
+            policies.google.com/technologies/partner-sites
           </a>
           .
         </p>
         <h2>Service providers</h2>
         <p>
-          Netlify hosts the site, Supabase runs the generation server and cache, and OpenAI generates images. Each only
-          receives what it needs to do that job.
+          Netlify hosts the site, Supabase runs the generation server and cache, OpenAI generates and moderates images,
+          Slack delivers /moji requests, and Google serves ads. Each only receives what it needs to do that job, and
+          some of them process data in the United States. We don't sell your data.
         </p>
+        <h2>How long we keep things</h2>
+        <p>
+          Hashed usage log entries are kept only as long as needed to enforce limits and spot abuse. Cached images are
+          kept so repeat requests stay fast, and may be cleared at any time. Your Gallery stays on your device until you
+          delete it.
+        </p>
+        <h2>Children</h2>
+        <p>Moji Locker isn't directed at children under 13, and we don't knowingly collect information from them.</p>
         <h2>Your choices</h2>
         <p>
           You can use Moji Locker without generating anything, in which case nothing you make leaves your device. For
-          questions or deletion requests, email <Mail />.
+          questions, or to exercise your privacy rights (such as access or deletion under laws like the GDPR or CCPA),
+          email <Mail />. Because we don't store raw IPs, account details or descriptions, there's usually nothing that
+          can be linked back to you.
         </p>
+        <h2>Changes</h2>
+        <p>If this policy changes, we'll update it here and change the date at the top.</p>
       </>
     ),
   },
