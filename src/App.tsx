@@ -1039,6 +1039,7 @@ function Editor() {
                     className="text-button share-button"
                     onClick={postToGiphy}
                     disabled={!result || !!stickerIssue}
+                    aria-describedby="giphy-howto"
                   >
                     <ExternalLink size={14} aria-hidden />
                     {t('postToGiphy')}
