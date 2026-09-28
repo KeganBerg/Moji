@@ -48,6 +48,7 @@ const it: Messages = {
   specFrames: 'GIF fino a {n} fotogrammi',
   motion: 'Movimento',
   motionHint: 'Scegline uno o combinane alcuni',
+  speed: 'Velocità',
   motionNone: 'Nessuno',
   motionSpin: 'Ruota',
   motionBounce: 'Rimbalza',

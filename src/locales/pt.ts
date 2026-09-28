@@ -48,6 +48,7 @@ const pt: Messages = {
   specFrames: 'GIF com até {n} quadros',
   motion: 'Movimento',
   motionHint: 'Escolha um ou combine vários',
+  speed: 'Velocidade',
   motionNone: 'Estático',
   motionSpin: 'Girar',
   motionBounce: 'Quicar',

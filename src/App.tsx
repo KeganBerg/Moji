@@ -24,7 +24,7 @@ import { setPaused } from './lib/ticker'
 import { Gallery } from './components/Gallery'
 import { Segmented } from './components/Segmented'
 import { SiteFooter, SiteHeader } from './components/SiteChrome'
-import { ANIMATIONS, composeAnimations, getAnimation } from './lib/animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './lib/animations'
 import { exportGif, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
@@ -115,6 +115,7 @@ function Editor() {
   const [customKb, setCustomKb] = useState(256)
   // Picked motions stack (e.g. Party + Bounce); an empty list means static.
   const [motionIds, setMotionIds] = useState<string[]>([])
+  const [speed, setSpeed] = useState(SPEED.default)
   const [fit, setFit] = useState<Fit>(DEFAULT_RENDER.fit)
   const [padding, setPadding] = useState(DEFAULT_RENDER.padding)
   const [background, setBackground] = useState<string | null>(null)
@@ -144,7 +145,9 @@ function Editor() {
     const base = PLATFORMS[platformId]
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
-  const animation = useMemo(() => composeAnimations(motionIds.map(getAnimation)), [motionIds])
+  const animation = useMemo(() => withSpeed(composeAnimations(motionIds.map(getAnimation)), speed), [motionIds, speed])
+  // The motion picker's thumbnails play at the chosen speed too.
+  const motionThumbs = useMemo(() => ANIMATIONS.map((a) => withSpeed(a, speed)), [speed])
   const toggleMotion = (id: string) =>
     setMotionIds((ids) => (id === 'none' ? [] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const options: RenderOptions = useMemo(
@@ -186,6 +189,7 @@ function Editor() {
     setPrompt('')
     setName('')
     setMotionIds([])
+    setSpeed(SPEED.default)
     setTune(DEFAULT_TUNE)
     setError(null)
     resetAdjust()
@@ -442,7 +446,13 @@ function Editor() {
         >
           <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
             {source ? (
-              <EmojiCanvas source={source} animation={animation} options={options} size={previewSize} label={t('emojiPreview')} />
+              <EmojiCanvas
+                source={source}
+                animation={animation}
+                options={options}
+                size={previewSize}
+                label={t('emojiPreview')}
+              />
             ) : (
               <button type="button" className="empty" onClick={() => fileInput.current?.click()}>
                 <span className={`empty-icon${season.on ? ' is-ghost' : ''}`}>
@@ -622,7 +632,7 @@ function Editor() {
                 <span className="hint">{motionIds.length > 1 ? motionLabel : t('motionHint')}</span>
               </div>
               <div className="motions" role="group" aria-label={t('motion')}>
-                {ANIMATIONS.map((a) => {
+                {motionThumbs.map((a) => {
                   const on = a.id === 'none' ? motionIds.length === 0 : motionIds.includes(a.id)
                   return (
                     <button
@@ -644,6 +654,22 @@ function Editor() {
                   )
                 })}
               </div>
+              {motionIds.length > 0 && (
+                <label className="setting speed">
+                  <span>{t('speed')}</span>
+                  <input
+                    type="range"
+                    min={SPEED.min}
+                    max={SPEED.max}
+                    step={SPEED.step}
+                    value={speed}
+                    onChange={(e) => setSpeed(Number(e.target.value))}
+                    onDoubleClick={() => setSpeed(SPEED.default)}
+                    aria-valuetext={`${speed}×`}
+                  />
+                  <output aria-hidden>{speed}×</output>
+                </label>
+              )}
             </div>
 
             <div className="group">
@@ -853,7 +879,10 @@ function Editor() {
                     <span>
                       {result.withinLimit ? t('ready') : t('overLimit')} ·{' '}
                       {isolate(`${result.size}×${result.size} ${result.extension.toUpperCase()}`)} ·{' '}
-                      {t('sizeOf', { size: isolate(formatBytes(result.bytes)), max: isolate(formatBytes(platform.maxBytes)) })}
+                      {t('sizeOf', {
+                        size: isolate(formatBytes(result.bytes)),
+                        max: isolate(formatBytes(platform.maxBytes)),
+                      })}
                     </span>
                   </>
                 )}

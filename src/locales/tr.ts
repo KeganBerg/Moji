@@ -48,6 +48,7 @@ const tr: Messages = {
   specFrames: 'GIF en fazla {n} kare',
   motion: 'Hareket',
   motionHint: 'Birini seçin veya birkaçını birleştirin',
+  speed: 'Hız',
   motionNone: 'Sabit',
   motionSpin: 'Dönme',
   motionBounce: 'Zıplama',

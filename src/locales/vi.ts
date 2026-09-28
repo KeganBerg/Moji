@@ -48,6 +48,7 @@ const vi: Messages = {
   specFrames: 'GIF tối đa {n} khung hình',
   motion: 'Chuyển động',
   motionHint: 'Chọn một hoặc kết hợp vài kiểu',
+  speed: 'Tốc độ',
   motionNone: 'Tĩnh',
   motionSpin: 'Xoay tròn',
   motionBounce: 'Nảy',

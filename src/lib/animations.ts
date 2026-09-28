@@ -186,3 +186,22 @@ export function composeAnimations(list: Animation[]): Animation {
     },
   }
 }
+
+export const SPEED = { min: 0.25, max: 3, step: 0.25, default: 1 }
+
+/**
+ * Plays a loop faster or slower. Slower loops get more frames so they stay
+ * smooth, faster ones fewer so no frame drops under the GIF's 20 ms floor.
+ * The loop length is snapped to a whole number of 10 ms frames (an even
+ * count, so halving frames for size still divides it), which keeps the
+ * exported GIF exactly as fast as the preview.
+ */
+export function withSpeed(anim: Animation, speed: number): Animation {
+  if (anim.frames <= 1 || speed === 1) return anim
+  const target = anim.duration / speed
+  const most = Math.max(anim.frames, 48)
+  let frames = Math.min(Math.round(anim.frames / speed), most, Math.floor(target / 20))
+  frames = Math.max(2, frames - (frames % 2))
+  const delay = Math.max(20, Math.round(target / frames / 10) * 10)
+  return { ...anim, duration: delay * frames, frames }
+}

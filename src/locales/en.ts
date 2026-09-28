@@ -50,6 +50,7 @@ export const en = {
   specFrames: 'GIF up to {n} frames',
   motion: 'Motion',
   motionHint: 'Pick one or combine a few',
+  speed: 'Speed',
   motionNone: 'Static',
   motionSpin: 'Spin',
   motionBounce: 'Bounce',

@@ -48,6 +48,7 @@ const hi: Messages = {
   specFrames: 'GIF में ज़्यादा से ज़्यादा {n} फ़्रेम',
   motion: 'मोशन',
   motionHint: 'एक चुनें या कुछ को मिलाएं',
+  speed: 'गति',
   motionNone: 'स्थिर',
   motionSpin: 'घूमना',
   motionBounce: 'उछलना',

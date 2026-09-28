@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMATIONS, composeAnimations, getAnimation } from './animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './animations'
 import { encodeGif, frameTiming, gifLadder } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
@@ -55,6 +55,28 @@ describe('gif sizing', () => {
         expect(count * delay).toBe(a.duration)
       }
     }
+  })
+  it('keeps sped-up and slowed-down loops exact', () => {
+    const combos = [
+      ...ANIMATIONS.filter((a) => a.frames > 1),
+      composeAnimations([getAnimation('party'), getAnimation('bounce')]),
+    ]
+    for (const base of combos) {
+      for (let speed = SPEED.min; speed <= SPEED.max; speed += SPEED.step) {
+        const a = withSpeed(base, speed)
+        // Within 20% of the asked-for speed.
+        expect(Math.abs(base.duration / speed / a.duration - 1)).toBeLessThan(0.2)
+        for (const step of [1, 2]) {
+          const { count, delay } = frameTiming(a, PLATFORMS.slack.maxFrames, step)
+          expect(delay).toBeGreaterThanOrEqual(20)
+          expect(count).toBeLessThanOrEqual(50)
+          expect(count * delay).toBe(a.duration)
+        }
+      }
+    }
+    expect(withSpeed(getAnimation('spin'), 1)).toBe(getAnimation('spin'))
+    expect(withSpeed(getAnimation('none'), 2)).toBe(getAnimation('none'))
+    expect(withSpeed(getAnimation('spin'), 2).duration).toBe(600)
   })
   it('encodes a valid looping GIF', () => {
     const size = 8
