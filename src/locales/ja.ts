@@ -105,6 +105,8 @@ const ja: Messages = {
   motionStill: '{platform} のステッカーは動きません',
   giphyNeedsMotion: 'GIPHY はアニメーションのステッカーのみ受け付けます。モーションを選んでください。',
   giphyNeedsClear: 'GIPHY には透明な背景が必要です。塗りつぶしの色を外してください。',
+  giphyNeedsSpace:
+    'GIPHY ではステッカーの 20% 以上が透明である必要があります。拡大率を下げるか背景を削除してください。',
   copySticker: 'ステッカーをコピー',
   stickerCopied: 'コピーしました',
   postToGiphy: 'GIPHY に投稿',

@@ -105,6 +105,7 @@ const hi: Messages = {
   motionStill: '{platform} स्टिकर स्थिर रहते हैं',
   giphyNeedsMotion: 'GIPHY केवल एनिमेटेड स्टिकर स्वीकार करता है। कोई मोशन चुनें।',
   giphyNeedsClear: 'GIPHY के लिए पारदर्शी बैकग्राउंड ज़रूरी है। फ़िल रंग हटाएँ।',
+  giphyNeedsSpace: 'GIPHY के लिए स्टिकर का कम से कम 20% हिस्सा पारदर्शी होना चाहिए। स्केल कम करें या बैकग्राउंड हटाएँ।',
   copySticker: 'स्टिकर कॉपी करें',
   stickerCopied: 'कॉपी हो गया',
   postToGiphy: 'GIPHY पर पोस्ट करें',

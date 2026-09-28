@@ -1487,8 +1487,9 @@ input[role='switch']:checked::after {
     display: none;
   }
 
-  /* Unless GIPHY would reject the sticker as it is. */
-  .group.export .hint.is-warning {
+  /* Except GIPHY warnings and the sticker how-tos, which are the next step. */
+  .group.export .hint.is-warning,
+  .group.export .hint.is-howto {
     display: block;
   }
 }

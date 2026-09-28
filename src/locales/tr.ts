@@ -105,6 +105,8 @@ const tr: Messages = {
   motionStill: '{platform} çıkartmaları hareketsizdir',
   giphyNeedsMotion: 'GIPHY yalnızca hareketli çıkartmaları kabul eder. Bir hareket seçin.',
   giphyNeedsClear: 'GIPHY şeffaf arka plan ister. Dolgu rengini kaldırın.',
+  giphyNeedsSpace:
+    'GIPHY, çıkartmanın en az %20’sinin şeffaf olmasını ister. Ölçeği küçültün veya arka planı kaldırın.',
   copySticker: 'Çıkartmayı kopyala',
   stickerCopied: 'Kopyalandı',
   postToGiphy: "GIPHY'de paylaş",

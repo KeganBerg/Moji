@@ -105,6 +105,8 @@ const it: Messages = {
   motionStill: 'Gli sticker di {platform} sono statici',
   giphyNeedsMotion: 'GIPHY accetta solo sticker animati. Scegli un movimento.',
   giphyNeedsClear: 'GIPHY richiede uno sfondo trasparente. Togli il colore di riempimento.',
+  giphyNeedsSpace:
+    'GIPHY richiede che almeno il 20% dello sticker sia trasparente. Riduci la scala o rimuovi lo sfondo.',
   copySticker: 'Copia sticker',
   stickerCopied: 'Copiato',
   postToGiphy: 'Pubblica su GIPHY',

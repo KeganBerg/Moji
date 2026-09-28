@@ -106,6 +106,8 @@ const de: Messages = {
   motionStill: '{platform}-Sticker sind unbewegt',
   giphyNeedsMotion: 'GIPHY nimmt nur animierte Sticker an. Wähle eine Bewegung.',
   giphyNeedsClear: 'GIPHY braucht einen transparenten Hintergrund. Entferne die Füllfarbe.',
+  giphyNeedsSpace:
+    'GIPHY braucht mindestens 20 % Transparenz im Sticker. Verringere die Skalierung oder entferne den Hintergrund.',
   copySticker: 'Sticker kopieren',
   stickerCopied: 'Kopiert',
   postToGiphy: 'Auf GIPHY posten',

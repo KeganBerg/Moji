@@ -105,6 +105,7 @@ const id: Messages = {
   motionStill: 'Stiker {platform} tidak bergerak',
   giphyNeedsMotion: 'GIPHY hanya menerima stiker animasi. Pilih gerakan.',
   giphyNeedsClear: 'GIPHY memerlukan latar transparan. Hapus warna isian.',
+  giphyNeedsSpace: 'GIPHY memerlukan setidaknya 20% stiker transparan. Kecilkan Skala atau hapus latar.',
   copySticker: 'Salin stiker',
   stickerCopied: 'Tersalin',
   postToGiphy: 'Posting ke GIPHY',

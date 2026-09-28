@@ -105,6 +105,7 @@ const ko: Messages = {
   motionStill: '{platform} 스티커는 움직이지 않아요',
   giphyNeedsMotion: 'GIPHY는 움직이는 스티커만 받아요. 모션을 선택하세요.',
   giphyNeedsClear: 'GIPHY는 투명한 배경이 필요해요. 채우기 색을 없애세요.',
+  giphyNeedsSpace: 'GIPHY는 스티커의 20% 이상이 투명해야 해요. 배율을 줄이거나 배경을 제거하세요.',
   copySticker: '스티커 복사',
   stickerCopied: '복사됨',
   postToGiphy: 'GIPHY에 게시',

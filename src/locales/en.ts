@@ -108,6 +108,7 @@ export const en = {
   motionStill: '{platform} stickers stay still',
   giphyNeedsMotion: 'GIPHY only accepts animated stickers. Pick a motion.',
   giphyNeedsClear: 'GIPHY needs a transparent background. Clear the fill color.',
+  giphyNeedsSpace: 'GIPHY needs at least 20% of the sticker see-through. Lower Scale or remove the background.',
   copySticker: 'Copy sticker',
   stickerCopied: 'Copied',
   postToGiphy: 'Post to GIPHY',

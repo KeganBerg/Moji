@@ -105,6 +105,7 @@ const zh: Messages = {
   motionStill: '{platform} 贴纸为静态',
   giphyNeedsMotion: 'GIPHY 只接受动态贴纸。请选择一种动效。',
   giphyNeedsClear: 'GIPHY 需要透明背景。请去掉填充颜色。',
+  giphyNeedsSpace: 'GIPHY 要求贴纸至少 20% 为透明。请调小缩放或去除背景。',
   copySticker: '复制贴纸',
   stickerCopied: '已复制',
   postToGiphy: '发布到 GIPHY',
