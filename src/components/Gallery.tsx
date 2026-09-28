@@ -79,13 +79,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
             <h2 id="gallery-title">{t('gallery')}</h2>
             <p>{t('galleryIntro')}</p>
           </div>
-          <button
-            ref={closeButton}
-            type="button"
-            className="icon-button"
-            onClick={onClose}
-            aria-label={t('closeGallery')}
-          >
+          <button ref={closeButton} type="button" className="icon-button" onClick={onClose} aria-label={t('closeGallery')}>
             <X size={18} />
           </button>
         </header>
@@ -110,8 +104,7 @@ export function Gallery({ open, items, onClose, onDownload, onEdit, onDelete }: 
                 <div className="gallery-meta">
                   <strong>:{item.name}:</strong>
                   <span>
-                    {item.platform === 'Custom' ? t('custom') : item.platform} · {item.extension.toUpperCase()} ·{' '}
-                    {formatBytes(item.bytes)}
+                    {item.platform === 'Custom' ? t('custom') : item.platform} · {item.extension.toUpperCase()} · {formatBytes(item.bytes)}
                   </span>
                 </div>
                 <div className="gallery-actions">
