@@ -57,6 +57,7 @@ import {
   loadImage,
   looksCuttable,
   prepareSource,
+  safeInset,
   transparentShare,
   type Fit,
   type RenderOptions,
@@ -173,7 +174,7 @@ function Editor() {
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
   // Instagram stickers don't animate, so that preset previews and exports a still.
-  const animation = useMemo(
+  const motion = useMemo(
     () =>
       platform.staticOnly
         ? getAnimation('none')
@@ -181,7 +182,7 @@ function Editor() {
     [motionIds, speed, intensity, platform.staticOnly],
   )
   // The motion picker's thumbnails play at the chosen speed and intensity too.
-  const motionThumbs = useMemo(
+  const thumbMotions = useMemo(
     () => ANIMATIONS.map((a) => withSpeed(withIntensity(a, intensity), speed)),
     [speed, intensity],
   )
@@ -207,6 +208,16 @@ function Editor() {
   const source = useMemo(
     () => (tuned && outline > 0 ? addOutline(tuned, outline, outlineColor) : tuned),
     [tuned, outline, outlineColor],
+  )
+  // Every motion is sized to this image's real shape, so no frame ever pushes
+  // part of the emoji past the edge.
+  const animation = useMemo(
+    () => (source ? { ...motion, inset: safeInset(source, options, motion) } : motion),
+    [source, options, motion],
+  )
+  const motionThumbs = useMemo(
+    () => (source ? thumbMotions.map((a) => ({ ...a, inset: safeInset(source, options, a) })) : thumbMotions),
+    [source, options, thumbMotions],
   )
   const adjustChanged =
     fit !== DEFAULT_RENDER.fit ||

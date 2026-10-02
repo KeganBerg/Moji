@@ -14,7 +14,7 @@ export interface FrameTransform {
   hue?: number
   /** How strongly the Party color washes over the image, 0 to 1. */
   tint?: number
-  /** Confetti burst progress, 0 to 1. Undefined means no confetti this frame. */
+  /** Sparkle burst progress, 0 to 1. Undefined means no sparkles this frame. */
   burst?: number
 }
 
@@ -178,7 +178,7 @@ export const ANIMATIONS: Animation[] = [
     duration: 1600,
     frames: 32,
     inset: 0.84,
-    // Pops in with an overshoot and a confetti burst, holds, then pops out.
+    // Pops in with an overshoot and a burst of sparkles, holds, then pops out.
     // The loop starts mid-hold so the first frame (the one apps use as a
     // still) shows the whole emoji.
     at: (t) => {
