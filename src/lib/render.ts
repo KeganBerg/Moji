@@ -1,4 +1,5 @@
 import type { Animation, FrameTransform } from './animations'
+import { checkFit, type FitReport } from '../../supabase/functions/_shared/fit'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 
 export type Fit = 'contain' | 'cover'
@@ -58,9 +59,14 @@ export const WORKING_SIZE = 512
 type Canvas2D = HTMLCanvasElement
 
 function makeCanvas(w: number, h: number): Canvas2D {
+  const width = Math.max(1, Math.round(w))
+  const height = Math.max(1, Math.round(h))
+  // Inside the export worker there is no document. An OffscreenCanvas does
+  // everything drawing here needs (2D context, drawImage, getImageData).
+  if (typeof document === 'undefined') return new OffscreenCanvas(width, height) as unknown as Canvas2D
   const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.round(w))
-  c.height = Math.max(1, Math.round(h))
+  c.width = width
+  c.height = height
   return c
 }
 
@@ -479,6 +485,15 @@ export function looksCuttable(img: CanvasImageSource & { width: number; height: 
   for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
   const share = kept / (c.width * c.height)
   return share >= 0.03 && share <= 0.9
+}
+
+/** The server's fit check (cut off, background left in, blank), run on a small copy. */
+export function fitOf(img: CanvasImageSource & { width: number; height: number }): FitReport {
+  const scale = Math.min(1, 256 / Math.max(img.width, img.height))
+  const c = makeCanvas(img.width * scale, img.height * scale)
+  const ctx = ctx2d(c)
+  ctx.drawImage(img, 0, 0, c.width, c.height)
+  return checkFit(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height)
 }
 
 export { makeCanvas, ctx2d }

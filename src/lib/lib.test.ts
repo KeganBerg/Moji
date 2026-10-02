@@ -7,6 +7,7 @@ import { DEFAULT_TUNE, tunePixels } from './tune'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 import { isHalloweenSeason } from './season'
 import { NOT_FOUND, pageFor } from '../pages/pages'
+import { checkFit, fitPenalty } from '../../supabase/functions/_shared/fit'
 
 describe('sanitizeName', () => {
   it('makes Slack-safe names', () => {
@@ -391,5 +392,48 @@ describe('withSpeed', () => {
         expect(poses.size).toBeGreaterThan(2)
       }
     }
+  })
+})
+
+describe('checkFit', () => {
+  // A w × h bitmap with a filled circle of radius r at (cx, cy).
+  const disc = (w: number, h: number, cx: number, cy: number, r: number) => {
+    const d = new Uint8ClampedArray(w * h * 4)
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 < r * r) d[(y * w + x) * 4 + 3] = 255
+    return d
+  }
+
+  it('passes a centered emoji with a margin', () => {
+    expect(checkFit(disc(200, 200, 100, 100, 85), 200, 200).problem).toBeNull()
+  })
+
+  it('flags a subject sliced off at the edge, and which side', () => {
+    const r = checkFit(disc(200, 200, 40, 100, 80), 200, 200)
+    expect(r.problem).toBe('cropped')
+    expect(r.sides).toEqual(['left'])
+  })
+
+  it('lets a round emoji touch the edge without counting it as cut off', () => {
+    // As the model returns it: 1024 px, touching all four sides.
+    expect(checkFit(disc(1024, 1024, 512, 512, 512), 1024, 1024).problem).toBeNull()
+  })
+
+  it('flags a small slice off one side', () => {
+    expect(checkFit(disc(1024, 1024, 512, 470, 500), 1024, 1024).sides).toEqual(['top'])
+  })
+
+  it('flags a full tile and a blank canvas', () => {
+    const tile = new Uint8ClampedArray(64 * 64 * 4).fill(255)
+    expect(checkFit(tile, 64, 64).problem).toBe('no-background')
+    expect(checkFit(new Uint8ClampedArray(64 * 64 * 4), 64, 64).problem).toBe('empty')
+  })
+
+  it('prefers a fitting result over a cut-off one over a full tile', () => {
+    const ok = checkFit(disc(100, 100, 50, 50, 40), 100, 100)
+    const cut = checkFit(disc(100, 100, 10, 50, 40), 100, 100)
+    const tile = checkFit(new Uint8ClampedArray(100 * 100 * 4).fill(255), 100, 100)
+    expect(fitPenalty(ok)).toBeLessThan(fitPenalty(cut))
+    expect(fitPenalty(cut)).toBeLessThan(fitPenalty(tile))
   })
 })

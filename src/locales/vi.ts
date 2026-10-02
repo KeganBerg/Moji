@@ -30,6 +30,12 @@ const vi: Messages = {
   generate: 'Tạo',
   generationsLeftOne: 'Còn {n} lượt tạo bằng AI hôm nay',
   generationsLeft: 'Còn {n} lượt tạo bằng AI hôm nay',
+  tryAgain: 'Thử lại',
+  tryAgainFree: 'Miễn phí',
+  tryAgainTitleFree: 'Vẽ miễn phí một phiên bản mới cho mô tả này',
+  tryAgainTitle: 'Vẽ một phiên bản mới cho mô tả này (dùng một lượt tạo bằng AI)',
+  fitCropped: 'Bị cắt ở mép',
+  fitNoBackground: 'Chưa xóa nền',
   aiNote: 'Tạo bằng AI, nền trong suốt',
   offlineNote: 'Xem trước ngoại tuyến: bản dựng này chưa kết nối tính năng tạo bằng AI',
 

@@ -1,5 +1,5 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc'
-import type { Animation } from './animations'
+import { buildMotion, type Animation, type MotionSpec } from './animations'
 import type { Platform } from './platforms'
 import { ctx2d, drawFrame, makeCanvas, type RenderOptions } from './render'
 
@@ -200,7 +200,10 @@ export async function exportGif(
       frames = await renderFrames(source, attempt.size, opts, anim, count, signal)
       cache.set(key, frames)
     }
-    const bytes = await encodeGifAsync(frames, attempt.size, delay, attempt.colors, signal)
+    // Off the page's thread (no signal) nothing waits on input, so encode in one go.
+    const bytes = signal
+      ? await encodeGifAsync(frames, attempt.size, delay, attempt.colors, signal)
+      : encodeGif(frames, attempt.size, delay, attempt.colors)
     const blob = new Blob([bytes as BlobPart], { type: 'image/gif' })
     const result: ExportResult = {
       blob,
@@ -214,7 +217,84 @@ export async function exportGif(
     if (result.withinLimit) return result
     if (!best || result.bytes < best.bytes) best = result
     // Let the UI breathe between attempts.
-    await new Promise((r) => setTimeout(r, 0))
+    if (signal) await new Promise((r) => setTimeout(r, 0))
   }
   return best!
+}
+
+/** What the page posts to the export worker. */
+export interface GifJob {
+  source: ImageBitmap
+  size: number
+  opts: RenderOptions
+  motion: MotionSpec
+  platform: Platform
+}
+
+export type GifJobReply = { ok: true; result: ExportResult } | { ok: false; error: string }
+
+let offThread: boolean | null = null
+
+/** Whether this browser can draw on a canvas inside a worker (Safari 16.4+, every current Chrome and Firefox). */
+function canExportOffThread(): boolean {
+  if (offThread === null) {
+    try {
+      offThread =
+        typeof Worker !== 'undefined' &&
+        typeof OffscreenCanvas !== 'undefined' &&
+        typeof createImageBitmap !== 'undefined' &&
+        !!new OffscreenCanvas(1, 1).getContext('2d')
+    } catch {
+      offThread = false
+    }
+  }
+  return offThread
+}
+
+/**
+ * exportGif in a Web Worker, so rendering, palette building and encoding
+ * never freeze the page, however big the export. Aborting stops the worker
+ * outright. Falls back to the page's thread where workers can't draw.
+ */
+export async function exportGifOffThread(
+  source: HTMLCanvasElement,
+  size: number,
+  opts: RenderOptions,
+  motion: MotionSpec,
+  platform: Platform,
+  signal?: AbortSignal,
+): Promise<ExportResult> {
+  const onPage = () => exportGif(source, size, opts, buildMotion(motion), platform, signal)
+  if (!canExportOffThread()) return onPage()
+  const bitmap = await createImageBitmap(source)
+  signal?.throwIfAborted()
+  let worker: Worker
+  try {
+    worker = new Worker(new URL('./exportWorker.ts', import.meta.url), { type: 'module' })
+  } catch {
+    bitmap.close()
+    offThread = false
+    return onPage()
+  }
+  const reply = await new Promise<GifJobReply | 'failed'>((resolve, reject) => {
+    const stop = () => {
+      worker.terminate()
+      reject(signal!.reason)
+    }
+    signal?.addEventListener('abort', stop, { once: true })
+    worker.onmessage = (e: MessageEvent<GifJobReply>) => resolve(e.data)
+    // The worker script itself failed to load or run: do it here instead.
+    worker.onerror = (e) => {
+      e.preventDefault()
+      resolve('failed')
+    }
+    const job: GifJob = { source: bitmap, size, opts, motion, platform }
+    worker.postMessage(job, [bitmap])
+  }).finally(() => worker.terminate())
+  if (reply === 'failed') {
+    offThread = false
+    return onPage()
+  }
+  if (!reply.ok) throw new Error(reply.error)
+  return reply.result
 }

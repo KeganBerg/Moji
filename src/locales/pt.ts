@@ -30,6 +30,12 @@ const pt: Messages = {
   generate: 'Gerar',
   generationsLeftOne: 'Resta {n} geração com IA hoje',
   generationsLeft: 'Restam {n} gerações com IA hoje',
+  tryAgain: 'Tentar de novo',
+  tryAgainFree: 'Grátis',
+  tryAgainTitleFree: 'Desenhar outra versão desta descrição de graça',
+  tryAgainTitle: 'Desenhar outra versão desta descrição (usa uma geração com IA)',
+  fitCropped: 'Cortado na borda',
+  fitNoBackground: 'Fundo não removido',
   aiNote: 'Geração com IA, com fundo transparente',
   offlineNote: 'Prévia offline: a geração com IA não está conectada nesta versão',
 

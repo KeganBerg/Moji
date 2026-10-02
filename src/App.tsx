@@ -13,11 +13,13 @@ import {
   LoaderCircle,
   Pause,
   Play,
+  RefreshCw,
   RotateCcw,
   RotateCw,
   Save,
   SaveCheck,
   Sparkles,
+  TriangleAlert,
   Upload,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
@@ -31,13 +33,13 @@ import {
   ANIMATIONS,
   INTENSITY,
   SPEED,
-  composeAnimations,
-  getAnimation,
+  buildMotion,
   takesIntensity,
   withIntensity,
   withSpeed,
+  type MotionSpec,
 } from './lib/animations'
-import { exportGif, exportPng, type ExportResult } from './lib/export'
+import { exportGifOffThread, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
   getAutoSave,
@@ -54,6 +56,7 @@ import {
   DEFAULT_RENDER,
   addOutline,
   WORKING_SIZE,
+  fitOf,
   loadImage,
   looksCuttable,
   prepareSource,
@@ -68,6 +71,7 @@ import { NumberField } from './components/NumberField'
 import { useFitLabels } from './lib/fitText'
 import { LANGUAGES, setLanguage, useI18n, type LangCode, type MessageKey } from './lib/i18n'
 import { errorText, toUiError, type UiError } from './lib/errors'
+import type { FitProblem } from '../supabase/functions/_shared/fit'
 
 interface HistoryItem {
   id: number
@@ -79,6 +83,10 @@ interface HistoryItem {
   cutoutDefault: boolean
   thumb: string
   name: string
+  /** The prompt and style an AI image came from, so Try again can redraw it. */
+  generated?: { prompt: string; style: StyleId }
+  /** What the fit check found wrong with an AI image, if anything. */
+  fit?: FitProblem | null
 }
 
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml'
@@ -132,6 +140,7 @@ function Editor() {
   const [style, setStyle] = useState<StyleId>(linked?.style ?? 'flat')
   const [generating, setGenerating] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
+  const [freeRetries, setFreeRetries] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
 
   const [platformId, setPlatformId] = useState<PlatformId>('slack')
@@ -174,13 +183,11 @@ function Editor() {
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
   // Instagram stickers don't animate, so that preset previews and exports a still.
-  const motion = useMemo(
-    () =>
-      platform.staticOnly
-        ? getAnimation('none')
-        : withSpeed(composeAnimations(motionIds.map((id) => withIntensity(getAnimation(id), intensity))), speed),
+  const motionSpec: MotionSpec = useMemo(
+    () => ({ ids: motionIds, speed, intensity, staticOnly: !!platform.staticOnly }),
     [motionIds, speed, intensity, platform.staticOnly],
   )
+  const motion = useMemo(() => buildMotion(motionSpec), [motionSpec])
   // The motion picker's thumbnails play at the chosen speed and intensity too.
   const thumbMotions = useMemo(
     () => ANIMATIONS.map((a) => withSpeed(withIntensity(a, intensity), speed)),
@@ -277,34 +284,45 @@ function Editor() {
   const extension = animation.frames > 1 ? 'gif' : 'png'
   const fileName = `${emojiName}.${extension}`
 
-  const addImage = useCallback(async (blob: Blob, suggestedName: string, fromUpload: boolean, signal?: AbortSignal) => {
-    const image = await loadImage(blob)
-    // Start over while the image was loading.
-    signal?.throwIfAborted()
-    // Uploads on a plain background (a moon on black, a logo on white) get cut out
-    // automatically. Generated images already come with a transparent background.
-    const cutout = fromUpload && looksCuttable(image)
-    const item: HistoryItem = {
-      id: nextId.current++,
-      image,
-      cutout,
-      cutoutDefault: cutout,
-      cutoutStrength: DEFAULT_STRENGTH,
-      thumb: URL.createObjectURL(blob),
-      name: sanitizeName(suggestedName, 'discord'),
-    }
-    setHistory((h) => {
-      const next = [item, ...h]
-      next.slice(HISTORY_LIMIT).forEach((old) => URL.revokeObjectURL(old.thumb))
-      return next.slice(0, HISTORY_LIMIT)
-    })
-    setActiveId(item.id)
-    setName('')
-    // Rotation and tuning belong to the old image; start the new one clean.
-    setRotation(0)
-    setFlip(false)
-    setTune(DEFAULT_TUNE)
-  }, [])
+  const addImage = useCallback(
+    async (
+      blob: Blob,
+      suggestedName: string,
+      fromUpload: boolean,
+      signal?: AbortSignal,
+      generated?: HistoryItem['generated'],
+    ) => {
+      const image = await loadImage(blob)
+      // Start over while the image was loading.
+      signal?.throwIfAborted()
+      // Uploads on a plain background (a moon on black, a logo on white) get cut out
+      // automatically. Generated images already come with a transparent background.
+      const cutout = fromUpload && looksCuttable(image)
+      const item: HistoryItem = {
+        id: nextId.current++,
+        image,
+        cutout,
+        cutoutDefault: cutout,
+        cutoutStrength: DEFAULT_STRENGTH,
+        thumb: URL.createObjectURL(blob),
+        name: sanitizeName(suggestedName, 'discord'),
+        generated,
+        fit: generated ? fitOf(image).problem : undefined,
+      }
+      setHistory((h) => {
+        const next = [item, ...h]
+        next.slice(HISTORY_LIMIT).forEach((old) => URL.revokeObjectURL(old.thumb))
+        return next.slice(0, HISTORY_LIMIT)
+      })
+      setActiveId(item.id)
+      setName('')
+      // Rotation and tuning belong to the old image; start the new one clean.
+      setRotation(0)
+      setFlip(false)
+      setTune(DEFAULT_TUNE)
+    },
+    [],
+  )
 
   const onFile = useCallback(
     async (file: File) => {
@@ -318,8 +336,10 @@ function Editor() {
     [addImage],
   )
 
-  const generate = async (cacheOnly = false) => {
-    const text = prompt.trim()
+  // retry redraws the active AI image's prompt as a fresh variation.
+  const generate = async (cacheOnly = false, retry?: HistoryItem['generated']) => {
+    const text = retry?.prompt ?? prompt.trim()
+    const as = retry?.style ?? style
     if (!text || generating) return
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -327,9 +347,13 @@ function Editor() {
     setGenerating(true)
     setError(null)
     try {
-      const out = await generator.generate({ prompt: text, style, cacheOnly }, controller.signal)
+      const out = await generator.generate({ prompt: text, style: as, cacheOnly, retry: !!retry }, controller.signal)
       if (out.remaining !== null) setRemaining(out.remaining)
-      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false, controller.signal)
+      if (out.freeRetries !== null) setFreeRetries(out.freeRetries)
+      await addImage(out.blob, text.split(/\s+/).slice(0, 3).join('_'), false, controller.signal, {
+        prompt: text,
+        style: as,
+      })
     } catch (e) {
       // A linked prompt that isn't cached just stays in the box for the visitor to run.
       if (!(e instanceof NotCachedError) && (e as Error).name !== 'AbortError') setError(toUiError(e))
@@ -374,7 +398,14 @@ function Editor() {
       try {
         const out =
           animation.frames > 1
-            ? await exportGif(source, platform.size, options, animation, platform, controller.signal)
+            ? await exportGifOffThread(
+                source,
+                platform.size,
+                options,
+                { ...motionSpec, inset: animation.inset },
+                platform,
+                controller.signal,
+              )
             : await exportPng(source, platform.size, options, platform, controller.signal)
         if (!cancelled) setExported({ key: exportKey, result: out })
       } catch (e) {
@@ -388,7 +419,7 @@ function Editor() {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [source, options, animation, platform, exportKey])
+  }, [source, options, animation, motionSpec, platform, exportKey])
 
   useEffect(() => {
     listGallery()
@@ -572,6 +603,26 @@ function Editor() {
               >
                 {paused ? <Play size={15} aria-hidden /> : <Pause size={15} aria-hidden />}
               </button>
+            )}
+            {active?.generated && !generating && (
+              <div className={`retry-bar${active.fit ? ' is-flagged' : ''}`}>
+                {active.fit && (
+                  <span className="retry-flag">
+                    <TriangleAlert size={13} aria-hidden />
+                    {t(active.fit === 'no-background' ? 'fitNoBackground' : 'fitCropped')}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="retry-button"
+                  onClick={() => generate(false, active.generated)}
+                  title={freeRetries !== 0 && generator.isReal ? t('tryAgainTitleFree') : t('tryAgainTitle')}
+                >
+                  <RefreshCw size={14} aria-hidden />
+                  {t('tryAgain')}
+                  {!!freeRetries && <span className="retry-free">{t('tryAgainFree')}</span>}
+                </button>
+              </div>
             )}
             {generating && (
               <div className="busy" aria-hidden>

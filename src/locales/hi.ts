@@ -30,6 +30,12 @@ const hi: Messages = {
   generate: 'बनाएं',
   generationsLeftOne: 'आज AI से {n} बार और बना सकते हैं',
   generationsLeft: 'आज AI से {n} बार और बना सकते हैं',
+  tryAgain: 'फिर से बनाएं',
+  tryAgainFree: 'मुफ़्त',
+  tryAgainTitleFree: 'इस विवरण का नया संस्करण मुफ़्त में बनाएं',
+  tryAgainTitle: 'इस विवरण का नया संस्करण बनाएं (AI से एक बार बनाना खर्च होगा)',
+  fitCropped: 'किनारे पर कटा हुआ',
+  fitNoBackground: 'बैकग्राउंड नहीं हटा',
   aiNote: 'AI से बनी इमेज, पारदर्शी बैकग्राउंड के साथ',
   offlineNote: 'ऑफ़लाइन प्रीव्यू: इस बिल्ड में AI से बनाने की सुविधा जुड़ी नहीं है',
 

@@ -30,6 +30,12 @@ export const en = {
   generate: 'Generate',
   generationsLeftOne: '{n} AI generation left today',
   generationsLeft: '{n} AI generations left today',
+  tryAgain: 'Try again',
+  tryAgainFree: 'Free',
+  tryAgainTitleFree: 'Draw a new version of this prompt for free',
+  tryAgainTitle: 'Draw a new version of this prompt (uses one AI generation)',
+  fitCropped: 'Cut off at the edge',
+  fitNoBackground: 'Background left in',
   aiNote: 'AI generation, with transparent backgrounds',
   offlineNote: 'Offline preview: AI generation is not connected in this build',
 
