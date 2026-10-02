@@ -59,9 +59,14 @@ export const WORKING_SIZE = 512
 type Canvas2D = HTMLCanvasElement
 
 function makeCanvas(w: number, h: number): Canvas2D {
+  const width = Math.max(1, Math.round(w))
+  const height = Math.max(1, Math.round(h))
+  // Inside the export worker there is no document. An OffscreenCanvas does
+  // everything drawing here needs (2D context, drawImage, getImageData).
+  if (typeof document === 'undefined') return new OffscreenCanvas(width, height) as unknown as Canvas2D
   const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.round(w))
-  c.height = Math.max(1, Math.round(h))
+  c.width = width
+  c.height = height
   return c
 }
 

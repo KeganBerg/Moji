@@ -33,13 +33,13 @@ import {
   ANIMATIONS,
   INTENSITY,
   SPEED,
-  composeAnimations,
-  getAnimation,
+  buildMotion,
   takesIntensity,
   withIntensity,
   withSpeed,
+  type MotionSpec,
 } from './lib/animations'
-import { exportGif, exportPng, type ExportResult } from './lib/export'
+import { exportGifOffThread, exportPng, type ExportResult } from './lib/export'
 import {
   deleteFromGallery,
   getAutoSave,
@@ -179,13 +179,11 @@ function Editor() {
     return platformId === 'custom' ? { ...base, size: customSize, maxBytes: customKb * 1024 } : base
   }, [platformId, customSize, customKb])
   // Instagram stickers don't animate, so that preset previews and exports a still.
-  const animation = useMemo(
-    () =>
-      platform.staticOnly
-        ? getAnimation('none')
-        : withSpeed(composeAnimations(motionIds.map((id) => withIntensity(getAnimation(id), intensity))), speed),
+  const motionSpec: MotionSpec = useMemo(
+    () => ({ ids: motionIds, speed, intensity, staticOnly: !!platform.staticOnly }),
     [motionIds, speed, intensity, platform.staticOnly],
   )
+  const animation = useMemo(() => buildMotion(motionSpec), [motionSpec])
   // The motion picker's thumbnails play at the chosen speed and intensity too.
   const motionThumbs = useMemo(
     () => ANIMATIONS.map((a) => withSpeed(withIntensity(a, intensity), speed)),
@@ -379,7 +377,14 @@ function Editor() {
       try {
         const out =
           animation.frames > 1
-            ? await exportGif(source, platform.size, options, animation, platform, controller.signal)
+            ? await exportGifOffThread(
+                source,
+                platform.size,
+                options,
+                { ...motionSpec, inset: animation.inset },
+                platform,
+                controller.signal,
+              )
             : await exportPng(source, platform.size, options, platform, controller.signal)
         if (!cancelled) setExported({ key: exportKey, result: out })
       } catch (e) {
@@ -393,7 +398,7 @@ function Editor() {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [source, options, animation, platform, exportKey])
+  }, [source, options, animation, motionSpec, platform, exportKey])
 
   useEffect(() => {
     listGallery()

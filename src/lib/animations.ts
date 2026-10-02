@@ -273,3 +273,24 @@ export function withIntensity(anim: Animation, amount: number): Animation {
     },
   }
 }
+
+/**
+ * The picked motions as plain data, so a Web Worker can rebuild the exact
+ * same Animation (functions can't be posted to one).
+ */
+export interface MotionSpec {
+  ids: string[]
+  speed: number
+  intensity: number
+  /** The destination only takes stills (Instagram). */
+  staticOnly: boolean
+  /** Overrides the composed motion's inset. */
+  inset?: number
+}
+
+export function buildMotion(spec: MotionSpec): Animation {
+  const anim = spec.staticOnly
+    ? getAnimation('none')
+    : withSpeed(composeAnimations(spec.ids.map((id) => withIntensity(getAnimation(id), spec.intensity))), spec.speed)
+  return spec.inset === undefined ? anim : { ...anim, inset: spec.inset }
+}
