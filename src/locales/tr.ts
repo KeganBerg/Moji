@@ -30,6 +30,12 @@ const tr: Messages = {
   generate: 'Oluştur',
   generationsLeftOne: 'Bugün kalan yapay zekâ oluşturma hakkı: {n}',
   generationsLeft: 'Bugün kalan yapay zekâ oluşturma hakkı: {n}',
+  tryAgain: 'Tekrar dene',
+  tryAgainFree: 'Ücretsiz',
+  tryAgainTitleFree: 'Bu açıklamanın yeni bir sürümünü ücretsiz çiz',
+  tryAgainTitle: 'Bu açıklamanın yeni bir sürümünü çiz (bir yapay zekâ oluşturma hakkı kullanır)',
+  fitCropped: 'Kenarda kesilmiş',
+  fitNoBackground: 'Arka plan kaldırılmamış',
   aiNote: 'Yapay zekâ ile şeffaf arka planlı görsel oluşturma',
   offlineNote: 'Çevrimdışı önizleme: Bu sürümde yapay zekâ ile oluşturma bağlı değil',
 

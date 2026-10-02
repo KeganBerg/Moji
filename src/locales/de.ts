@@ -30,6 +30,12 @@ const de: Messages = {
   generate: 'Generieren',
   generationsLeftOne: 'Heute noch {n} KI-Generierung übrig',
   generationsLeft: 'Heute noch {n} KI-Generierungen übrig',
+  tryAgain: 'Nochmal',
+  tryAgainFree: 'Gratis',
+  tryAgainTitleFree: 'Kostenlos eine neue Version dieser Beschreibung zeichnen',
+  tryAgainTitle: 'Eine neue Version dieser Beschreibung zeichnen (kostet eine KI-Generierung)',
+  fitCropped: 'Am Rand abgeschnitten',
+  fitNoBackground: 'Hintergrund nicht entfernt',
   aiNote: 'KI-Generierung mit transparentem Hintergrund',
   offlineNote: 'Offline-Vorschau: KI-Generierung ist in dieser Version nicht angebunden',
 

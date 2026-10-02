@@ -30,6 +30,12 @@ const zh: Messages = {
   generate: '生成',
   generationsLeftOne: '今天还剩 {n} 次 AI 生成',
   generationsLeft: '今天还剩 {n} 次 AI 生成',
+  tryAgain: '再试一次',
+  tryAgainFree: '免费',
+  tryAgainTitleFree: '免费按这段描述重新画一个版本',
+  tryAgainTitle: '按这段描述重新画一个版本（消耗一次 AI 生成）',
+  fitCropped: '边缘被裁切',
+  fitNoBackground: '背景未去除',
   aiNote: 'AI 生成，背景透明',
   offlineNote: '离线预览：此版本未连接 AI 生成',
 

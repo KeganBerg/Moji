@@ -30,6 +30,12 @@ const ja: Messages = {
   generate: '生成',
   generationsLeftOne: '今日の AI 生成は残り {n} 回',
   generationsLeft: '今日の AI 生成は残り {n} 回',
+  tryAgain: 'もう一度',
+  tryAgainFree: '無料',
+  tryAgainTitleFree: 'この説明で別のバージョンを無料で描く',
+  tryAgainTitle: 'この説明で別のバージョンを描く（AI 生成を 1 回使います）',
+  fitCropped: '端で切れています',
+  fitNoBackground: '背景が残っています',
   aiNote: 'AI 生成（背景は透明）',
   offlineNote: 'オフラインプレビュー：このビルドでは AI 生成を利用できません',
 

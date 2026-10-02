@@ -30,6 +30,12 @@ const it: Messages = {
   generate: 'Genera',
   generationsLeftOne: 'Ti resta {n} generazione IA per oggi',
   generationsLeft: 'Ti restano {n} generazioni IA per oggi',
+  tryAgain: 'Riprova',
+  tryAgainFree: 'Gratis',
+  tryAgainTitleFree: 'Disegna gratis un’altra versione di questa descrizione',
+  tryAgainTitle: 'Disegna un’altra versione di questa descrizione (usa una generazione IA)',
+  fitCropped: 'Tagliato sul bordo',
+  fitNoBackground: 'Sfondo non rimosso',
   aiNote: 'Generazione IA, con sfondo trasparente',
   offlineNote: 'Anteprima offline: la generazione IA non è collegata in questa versione',
 

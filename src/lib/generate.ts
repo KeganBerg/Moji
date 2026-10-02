@@ -21,6 +21,8 @@ export interface GenerateRequest {
   style: StyleId
   /** Only return an already-cached emoji; never spend a paid generation. */
   cacheOnly?: boolean
+  /** Try again: a fresh variation of a prompt already shown, never the cached copy. */
+  retry?: boolean
 }
 
 export interface GenerateResult {
@@ -28,6 +30,8 @@ export interface GenerateResult {
   cached: boolean
   /** Paid generations left today, when the server reports it. */
   remaining: number | null
+  /** Free Try agains left today, when the server reports it. */
+  freeRetries: number | null
 }
 
 export interface EmojiGenerator {
@@ -49,13 +53,17 @@ function hash(s: string): number {
 export class PlaceholderGenerator implements EmojiGenerator {
   readonly isReal = false
 
-  async generate({ prompt }: GenerateRequest): Promise<GenerateResult> {
+  private tries = 0
+
+  async generate({ prompt, retry }: GenerateRequest): Promise<GenerateResult> {
+    // Try again picks another color, standing in for the real model's variation.
+    if (retry) this.tries++
     const size = 512
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = size
     const ctx = canvas.getContext('2d')!
     const text = prompt.trim() || '?'
-    ctx.fillStyle = BADGE_COLORS[hash(text) % BADGE_COLORS.length]
+    ctx.fillStyle = BADGE_COLORS[(hash(text) + this.tries) % BADGE_COLORS.length]
     ctx.beginPath()
     ctx.arc(size / 2, size / 2, size / 2 - 8, 0, Math.PI * 2)
     ctx.fill()
@@ -75,7 +83,7 @@ export class PlaceholderGenerator implements EmojiGenerator {
     const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw placeholder'))), 'image/png'),
     )
-    return { blob, cached: false, remaining: null }
+    return { blob, cached: false, remaining: null, freeRetries: null }
   }
 }
 
@@ -125,11 +133,15 @@ export class SupabaseFunctionGenerator implements EmojiGenerator {
       if (body?.reason === 'uncached') throw new NotCachedError()
       throw new GenerationError(body?.error ?? 'Generation failed. Try again.', res.status)
     }
-    const remaining = res.headers.get('x-moji-remaining')
+    const header = (name: string) => {
+      const value = res.headers.get(name)
+      return value === null ? null : Number(value)
+    }
     return {
       blob: await res.blob(),
       cached: res.headers.get('x-moji-cache') === 'hit',
-      remaining: remaining === null ? null : Number(remaining),
+      remaining: header('x-moji-remaining'),
+      freeRetries: header('x-moji-free-retries'),
     }
   }
 }

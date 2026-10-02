@@ -23,7 +23,7 @@ function cors(origin: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Expose-Headers': 'x-moji-cache, x-moji-remaining',
+    'Access-Control-Expose-Headers': 'x-moji-cache, x-moji-remaining, x-moji-free-retries',
     Vary: 'Origin',
   }
 }
@@ -58,8 +58,10 @@ Deno.serve(async (req) => {
   // Links from the Slack app only ever show an emoji that's already cached, so
   // a link someone else crafted can't spend the visitor's paid generations.
   const cacheOnly = body.cacheOnly === true
+  // Try again: a fresh variation of a prompt this visitor was already shown.
+  const retry = body.retry === true && !cacheOnly
 
-  const out = await generateEmoji(adminClient(), visitor, subject, style, { cacheOnly })
+  const out = await generateEmoji(adminClient(), visitor, subject, style, { cacheOnly, retry })
   if (!out.ok) return json({ error: out.error, reason: out.reason }, out.status, headers)
 
   return new Response(out.png, {
@@ -68,6 +70,7 @@ Deno.serve(async (req) => {
       'Content-Type': 'image/png',
       'x-moji-cache': out.cached ? 'hit' : 'miss',
       ...(out.remaining === null ? {} : { 'x-moji-remaining': String(out.remaining) }),
+      ...(out.freeRetries === null ? {} : { 'x-moji-free-retries': String(out.freeRetries) }),
     },
   })
 })

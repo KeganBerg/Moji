@@ -30,6 +30,12 @@ const id: Messages = {
   generate: 'Buat',
   generationsLeftOne: 'Sisa {n} pembuatan AI hari ini',
   generationsLeft: 'Sisa {n} pembuatan AI hari ini',
+  tryAgain: 'Coba lagi',
+  tryAgainFree: 'Gratis',
+  tryAgainTitleFree: 'Gambar versi baru dari deskripsi ini secara gratis',
+  tryAgainTitle: 'Gambar versi baru dari deskripsi ini (memakai satu pembuatan AI)',
+  fitCropped: 'Terpotong di tepi',
+  fitNoBackground: 'Latar belakang belum dihapus',
   aiNote: 'Pembuatan dengan AI, latar belakang transparan',
   offlineNote: 'Pratinjau offline: pembuatan AI tidak terhubung di versi ini',
 
