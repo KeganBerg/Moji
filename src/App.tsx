@@ -52,6 +52,7 @@ import { DEFAULT_STRENGTH } from './lib/cutout'
 import { useSeason } from './lib/season'
 import {
   DEFAULT_RENDER,
+  addOutline,
   WORKING_SIZE,
   loadImage,
   looksCuttable,
@@ -146,6 +147,8 @@ function Editor() {
   const [rotation, setRotation] = useState(0)
   const [flip, setFlip] = useState(false)
   const [corners, setCorners] = useState(DEFAULT_RENDER.corners)
+  const [outline, setOutline] = useState(0)
+  const [outlineColor, setOutlineColor] = useState('#ffffff')
   const [tune, setTune] = useState<Tune>(DEFAULT_TUNE)
   const [name, setName] = useState('')
 
@@ -200,7 +203,11 @@ function Editor() {
   )
   const updateActive = (patch: Partial<HistoryItem>) =>
     setHistory((h) => h.map((item) => (item.id === activeId ? { ...item, ...patch } : item)))
-  const source = useMemo(() => (prepared ? applyTune(prepared, tune) : null), [prepared, tune])
+  const tuned = useMemo(() => (prepared ? applyTune(prepared, tune) : null), [prepared, tune])
+  const source = useMemo(
+    () => (tuned && outline > 0 ? addOutline(tuned, outline, outlineColor) : tuned),
+    [tuned, outline, outlineColor],
+  )
   const adjustChanged =
     fit !== DEFAULT_RENDER.fit ||
     padding !== DEFAULT_RENDER.padding ||
@@ -209,6 +216,7 @@ function Editor() {
     rotation !== 0 ||
     flip ||
     corners !== DEFAULT_RENDER.corners ||
+    outline > 0 ||
     (!!active && (active.cutout !== active.cutoutDefault || active.cutoutStrength !== DEFAULT_STRENGTH))
   const resetAdjust = () => {
     setFit(DEFAULT_RENDER.fit)
@@ -218,6 +226,8 @@ function Editor() {
     setRotation(0)
     setFlip(false)
     setCorners(DEFAULT_RENDER.corners)
+    setOutline(0)
+    setOutlineColor('#ffffff')
     if (active) updateActive({ cutout: active.cutoutDefault, cutoutStrength: DEFAULT_STRENGTH })
   }
   // Back to the empty editor, as if the page had just loaded. The destination stays.
@@ -870,6 +880,35 @@ function Editor() {
                 />
                 <output aria-hidden>{Math.round(corners * 100)}%</output>
               </label>
+              <label className="setting">
+                <span>{t('outline')}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={outline}
+                  onChange={(e) => setOutline(Number(e.target.value))}
+                  onDoubleClick={() => setOutline(0)}
+                  aria-valuetext={`${Math.round(outline * 100)}%`}
+                />
+                <output aria-hidden>{Math.round(outline * 100)}%</output>
+              </label>
+              {outline > 0 && (
+                <div className="setting">
+                  <span>{t('outlineColor')}</span>
+                  <div className="bg-options">
+                    <label className="swatch is-active" style={{ background: outlineColor }}>
+                      <input
+                        type="color"
+                        value={outlineColor}
+                        onChange={(e) => setOutlineColor(e.target.value)}
+                        aria-label={t('outlineColor')}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
               <label className="setting">
                 <span>{t('rotate')}</span>
                 <input

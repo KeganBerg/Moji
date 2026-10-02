@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withIntensity, withSpeed } from './animations'
 import { encodeGif, frameTiming, gifLadder, keepsMotion } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
 import { opaqueBounds, rotatedSize } from './render'
@@ -148,6 +148,34 @@ describe('composeAnimations', () => {
     expect(combo.duration).toBe(1200)
     expect(combo.frames).toBe(24)
     expect(combo.at(0).x).toBeCloseTo(0)
+  })
+})
+
+describe('spring motions', () => {
+  // The last frame must flow into the first, or the GIF visibly jumps each loop.
+  const close = (id: string) => {
+    const a = getAnimation(id)
+    const start = a.at(0)
+    const end = a.at(0.9999)
+    for (const k of ['rotate', 'scaleX', 'scaleY', 'x', 'y'] as const)
+      expect(
+        Math.abs((end[k] ?? (k.startsWith('scale') ? 1 : 0)) - (start[k] ?? (k.startsWith('scale') ? 1 : 0))),
+      ).toBeLessThan(0.02)
+  }
+  it('loops Bounce, Jiggle and Pop without a jump', () => {
+    close('bounce')
+    close('jiggle')
+    close('pop')
+  })
+  it('starts Pop on the whole emoji, so its still frame is never empty', () => {
+    expect(getAnimation('pop').at(0).scaleX).toBe(1)
+  })
+  it('keeps the confetti through stacking and intensity', () => {
+    const pop = getAnimation('pop')
+    const t = 0.7
+    expect(pop.at(t).burst).toBeGreaterThan(0)
+    expect(composeAnimations([pop, getAnimation('party')]).at(t).burst).toBe(pop.at(t).burst)
+    expect(withIntensity(pop, 1.5).at(t).burst).toBe(pop.at(t).burst)
   })
 })
 

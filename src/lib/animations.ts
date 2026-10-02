@@ -14,6 +14,8 @@ export interface FrameTransform {
   hue?: number
   /** How strongly the Party color washes over the image, 0 to 1. */
   tint?: number
+  /** Confetti burst progress, 0 to 1. Undefined means no confetti this frame. */
+  burst?: number
 }
 
 export interface Animation {
@@ -35,6 +37,18 @@ export interface Animation {
 
 const TAU = Math.PI * 2
 
+/**
+ * A plucked spring: starts at rest, kicks out, then rings down to nearly
+ * nothing by the end of the loop, so the GIF still loops cleanly. Rings
+ * `ring` half swings; `damping` sets how quickly it settles.
+ */
+const spring = (t: number, ring: number, damping: number) => Math.exp(-damping * t) * Math.sin(Math.PI * ring * t)
+
+/** Penner's back easing: overshoots the end and comes back. */
+const BACK = 2.6
+const easeOutBack = (x: number) => 1 + (BACK + 1) * (x - 1) ** 3 + BACK * (x - 1) ** 2
+const easeInBack = (x: number) => (BACK + 1) * x ** 3 - BACK * x ** 2
+
 export const ANIMATIONS: Animation[] = [
   { id: 'none', label: 'Static', duration: 1000, frames: 1, inset: 1, at: () => ({}) },
   {
@@ -48,14 +62,23 @@ export const ANIMATIONS: Animation[] = [
   {
     id: 'bounce',
     label: 'Bounce',
-    duration: 800,
-    frames: 20,
-    inset: 0.8,
+    duration: 900,
+    frames: 24,
+    inset: 0.78,
+    // A real hop: rises and falls on a gravity curve, stretches while moving
+    // fast, then lands with a squash that springs back.
     at: (t) => {
-      const h = Math.abs(Math.sin(t * Math.PI))
-      // Squash a little on landing.
-      const squash = h < 0.15 ? 1 - (0.15 - h) * 0.8 : 1
-      return { y: 0.1 - h * 0.2, scaleY: squash, scaleX: 2 - squash }
+      const air = 0.68
+      // Keeps the bottom edge on the ground as the height stretches or squashes.
+      const foot = (s: number) => 0.1 + (1 - s) * 0.36
+      if (t < air) {
+        const u = t / air
+        const speed = (1 - 2 * u) ** 2
+        const s = 1 + speed * 0.07
+        return { y: foot(s) - 4 * u * (1 - u) * 0.22, scaleY: s, scaleX: 2 - s }
+      }
+      const s = 1.07 - spring((t - air) / (1 - air), 3, 2.5) * 0.3
+      return { y: foot(s), scaleY: s, scaleX: 2 - s }
     },
   },
   {
@@ -105,14 +128,14 @@ export const ANIMATIONS: Animation[] = [
   {
     id: 'jiggle',
     label: 'Jiggle',
-    duration: 700,
-    frames: 16,
+    duration: 900,
+    frames: 22,
     inset: 0.78,
-    // A wiggle that swells at each end of the swing.
+    // Flicked like jelly: a hard swing that wobbles down, swelling as it goes.
     at: (t) => {
-      const swing = Math.sin(t * TAU)
-      const s = 1.02 + Math.abs(swing) * 0.12
-      return { rotate: swing * 0.28, scaleX: s, scaleY: s }
+      const swing = spring(t, 5, 3.2)
+      const s = 1.02 + Math.abs(swing) * 0.14
+      return { rotate: swing * 0.34, scaleX: s, scaleY: 2.04 - s }
     },
   },
   {
@@ -149,6 +172,22 @@ export const ANIMATIONS: Animation[] = [
       return { rotate: a, x: -Math.sin(a) * pivot, y: pivot - Math.cos(a) * pivot }
     },
   },
+  {
+    id: 'pop',
+    label: 'Pop',
+    duration: 1600,
+    frames: 32,
+    inset: 0.84,
+    // Pops in with an overshoot and a confetti burst, holds, then pops out.
+    // The loop starts mid-hold so the first frame (the one apps use as a
+    // still) shows the whole emoji.
+    at: (t) => {
+      const p = (t + 0.5) % 1
+      const s = p < 0.28 ? easeOutBack(p / 0.28) : p < 0.86 ? 1 : 1 - easeInBack((p - 0.86) / 0.14)
+      const burst = p >= 0.08 && p < 0.72 ? (p - 0.08) / 0.64 : undefined
+      return { scaleX: s, scaleY: s, rotate: p < 0.28 ? (s - 1) * 0.5 : 0, burst }
+    },
+  },
 ]
 
 export function getAnimation(id: string): Animation {
@@ -183,6 +222,7 @@ export function composeAnimations(list: Animation[]): Animation {
       let tint: number | undefined
       // Only color-cycling motions set hue, so "no hue" stays distinguishable from 0°.
       let hue: number | undefined
+      let burst: number | undefined
       for (const { a, cycles } of parts) {
         const f = a.at((t * cycles) % 1)
         rotate += f.rotate ?? 0
@@ -192,8 +232,9 @@ export function composeAnimations(list: Animation[]): Animation {
         y += f.y ?? 0
         if (f.hue !== undefined) hue = (hue ?? 0) + f.hue
         if (f.tint !== undefined) tint = Math.max(tint ?? 0, f.tint)
+        if (f.burst !== undefined) burst = f.burst
       }
-      return { rotate, scaleX, scaleY, x, y, hue, tint }
+      return { rotate, scaleX, scaleY, x, y, hue, tint, burst }
     },
   }
 }
@@ -269,6 +310,7 @@ export function withIntensity(anim: Animation, amount: number): Animation {
         y: f.y === undefined ? undefined : f.y * amount,
         hue: f.hue,
         tint: f.tint === undefined ? undefined : Math.min(0.8, f.tint * amount),
+        burst: f.burst,
       }
     },
   }

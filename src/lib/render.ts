@@ -213,6 +213,8 @@ export function drawFrame(
     ctx.fillStyle = opts.background
     ctx.fillRect(0, 0, size, size)
   }
+  // Behind the emoji, so the pieces look like they fly out from it.
+  if (transform.burst !== undefined) drawConfetti(ctx, size, transform.burst)
   // Fit: the whole rotated image stays inside the frame, so turning it never
   // crops a corner. Fill: the rotated image still covers the whole frame, so
   // turning it never leaves empty corners.
@@ -258,6 +260,68 @@ export function drawFrame(
     ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh)
   }
   ctx.restore()
+}
+
+const CONFETTI_COLORS = ['#ff5a5f', '#ffb400', '#00a699', '#3d7eff', '#ff8a3d', '#2ecc71']
+const CONFETTI_PIECES = 24
+
+/**
+ * One frame of a confetti burst at progress p (0 to 1). Every piece's path
+ * comes from its index, not a random number, so the preview and the exported
+ * GIF draw the same confetti.
+ */
+function drawConfetti(ctx: CanvasRenderingContext2D, size: number, p: number) {
+  const out = 1 - (1 - p) ** 3
+  const fade = p < 0.7 ? 1 : (1 - p) / 0.3
+  ctx.save()
+  for (let i = 0; i < CONFETTI_PIECES; i++) {
+    const spread = (i * 0.618034) % 1
+    const angle = i * 2.399963 + 0.3
+    const reach = (0.3 + spread * 0.16) * out
+    const x = size / 2 + Math.cos(angle) * reach * size
+    // A little gravity pulls the pieces down as they slow.
+    const y = size / 2 + (Math.sin(angle) * reach + 0.18 * p * p) * size
+    const w = size * (0.05 + spread * 0.03)
+    ctx.globalAlpha = fade
+    ctx.fillStyle = CONFETTI_COLORS[i % CONFETTI_COLORS.length]
+    ctx.translate(x, y)
+    ctx.rotate(angle + p * (4 + spread * 6))
+    // Pieces tumble, so their height flickers between edge-on and full.
+    const h = w * 0.6 * Math.abs(Math.cos(p * 9 + i)) + 1
+    ctx.fillRect(-w / 2, -h / 2, w, h)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+  }
+  ctx.restore()
+}
+
+const OUTLINE_MAX = 0.08
+
+/**
+ * Adds a die-cut sticker border: the image's shape grown outward by
+ * `amount` (0 to 1, up to 8% of its longer side) and filled with `color`.
+ * The canvas grows to make room, so the border never gets cut off.
+ */
+export function addOutline(source: Canvas2D, amount: number, color: string): Canvas2D {
+  const r = Math.round(amount * OUTLINE_MAX * Math.max(source.width, source.height))
+  if (r < 1) return source
+  const out = makeCanvas(source.width + r * 2, source.height + r * 2)
+  const ctx = ctx2d(out)
+  // Stamp the shape in rings around itself. Several radii fill the middle of
+  // the border, so thin parts (a whisker, a thin letter) don't leave holes.
+  for (const radius of [r, r * 0.66, r * 0.33]) {
+    // About one stamp every 3 px around the ring.
+    const steps = Math.max(12, Math.ceil((Math.PI * 2 * radius) / 3))
+    for (let k = 0; k < steps; k++) {
+      const a = (k / steps) * Math.PI * 2
+      ctx.drawImage(source, r + Math.cos(a) * radius, r + Math.sin(a) * radius)
+    }
+  }
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, out.width, out.height)
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.drawImage(source, r, r)
+  return out
 }
 
 let tintCanvas: Canvas2D | null = null
