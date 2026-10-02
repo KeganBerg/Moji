@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withSpeed } from './animations'
+import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withIntensity, withSpeed } from './animations'
 import { encodeGif, frameTiming, gifLadder, keepsMotion } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
-import { opaqueBounds, rotatedSize } from './render'
+import { DEFAULT_RENDER, SPARKLES, insetFor, opaqueBounds, rotatedSize } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 import { isHalloweenSeason } from './season'
@@ -149,6 +149,75 @@ describe('composeAnimations', () => {
     expect(combo.duration).toBe(1200)
     expect(combo.frames).toBe(24)
     expect(combo.at(0).x).toBeCloseTo(0)
+  })
+})
+
+describe('spring motions', () => {
+  // The last frame must flow into the first, or the GIF visibly jumps each loop.
+  const close = (id: string) => {
+    const a = getAnimation(id)
+    const start = a.at(0)
+    const end = a.at(0.9999)
+    for (const k of ['rotate', 'scaleX', 'scaleY', 'x', 'y'] as const)
+      expect(
+        Math.abs((end[k] ?? (k.startsWith('scale') ? 1 : 0)) - (start[k] ?? (k.startsWith('scale') ? 1 : 0))),
+      ).toBeLessThan(0.02)
+  }
+  it('loops Bounce, Jiggle and Pop without a jump', () => {
+    close('bounce')
+    close('jiggle')
+    close('pop')
+  })
+  it('starts Pop on the whole emoji, so its still frame is never empty', () => {
+    expect(getAnimation('pop').at(0).scaleX).toBe(1)
+  })
+  it('keeps the sparkles through stacking and intensity', () => {
+    const pop = getAnimation('pop')
+    const t = 0.7
+    expect(pop.at(t).burst).toBeGreaterThan(0)
+    expect(composeAnimations([pop, getAnimation('party')]).at(t).burst).toBe(pop.at(t).burst)
+    expect(withIntensity(pop, 1.5).at(t).burst).toBe(pop.at(t).burst)
+  })
+})
+
+describe('staying inside the frame', () => {
+  // Corners and edge midpoints of a 100 × 60 image: the worst case, since a
+  // square-cornered image reaches furthest when it turns.
+  const w = 100
+  const h = 60
+  const points: [number, number][] = []
+  for (const x of [-w / 2, 0, w / 2]) for (const y of [-h / 2, 0, h / 2]) points.push([x, y])
+
+  it('keeps every motion and rotation inside the canvas at full scale', () => {
+    for (const opts of [
+      { ...DEFAULT_RENDER, padding: 0 },
+      { ...DEFAULT_RENDER, padding: 0, rotation: 30, flip: true },
+    ])
+      for (const base of ANIMATIONS)
+        for (const amount of [1, 2]) {
+          const anim = withIntensity(base, amount)
+          if (anim.frames <= 1) continue
+          const inset = insetFor(points, w, h, opts, anim)
+          const box = rotatedSize(w, h, opts.rotation)
+          const unit = (inset * (1 - opts.padding * 2)) / Math.max(box.w, box.h)
+          const rot = (opts.rotation * Math.PI) / 180
+          for (let i = 0; i < 360; i++) {
+            const f = anim.at(i / 360)
+            for (const [px, py] of points) {
+              const u = opts.flip ? -px : px
+              const x0 = (u * Math.cos(rot) - py * Math.sin(rot)) * (f.scaleX ?? 1)
+              const y0 = (u * Math.sin(rot) + py * Math.cos(rot)) * (f.scaleY ?? 1)
+              const r = f.rotate ?? 0
+              const x = (f.x ?? 0) + (x0 * Math.cos(r) - y0 * Math.sin(r)) * unit
+              const y = (f.y ?? 0) + (x0 * Math.sin(r) + y0 * Math.cos(r)) * unit
+              expect(Math.max(Math.abs(x), Math.abs(y)), `${anim.id} at ${i}`).toBeLessThanOrEqual(0.5)
+            }
+          }
+        }
+  })
+
+  it('keeps every sparkle inside the canvas', () => {
+    for (const s of SPARKLES) expect(s.reach + s.size).toBeLessThanOrEqual(0.48)
   })
 })
 

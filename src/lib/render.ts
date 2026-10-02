@@ -1,4 +1,4 @@
-import type { FrameTransform } from './animations'
+import type { Animation, FrameTransform } from './animations'
 import { checkFit, type FitReport } from '../../supabase/functions/_shared/fit'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 
@@ -171,6 +171,94 @@ function snapAlpha(ctx: CanvasRenderingContext2D, w: number, h: number) {
   if (changed) ctx.putImageData(img, 0, 0)
 }
 
+const edgeCache = new WeakMap<Canvas2D, [number, number][]>()
+
+/**
+ * The left and right ends of the visible pixels on about 64 rows, centered on
+ * the image. Enough to find how far the emoji reaches when it moves, turns or
+ * stretches, without testing every pixel.
+ */
+function visibleEdges(source: Canvas2D): [number, number][] {
+  const cached = edgeCache.get(source)
+  if (cached) return cached
+  const { width: w, height: h } = source
+  const data = ctx2d(source).getImageData(0, 0, w, h).data
+  const points: [number, number][] = []
+  const step = Math.max(1, Math.floor(h / 64))
+  const rows = new Set<number>()
+  for (let y = 0; y < h; y += step) rows.add(y)
+  rows.add(h - 1)
+  for (const y of rows) {
+    let left = -1
+    let right = -1
+    for (let x = 0; x < w; x++)
+      if (data[(y * w + x) * 4 + 3] >= 128) {
+        if (left < 0) left = x
+        right = x
+      }
+    if (left >= 0) points.push([left - w / 2, y + 0.5 - h / 2], [right + 1 - w / 2, y + 0.5 - h / 2])
+  }
+  // A blank image still needs an answer; treat it as its full box.
+  if (points.length === 0) points.push([-w / 2, -h / 2], [w / 2, h / 2])
+  edgeCache.set(source, points)
+  return points
+}
+
+/** How far inside the frame's edge everything stays, as a share of the frame. */
+const EDGE_MARGIN = 0.01
+
+/**
+ * The biggest the emoji can be drawn so no frame of the motion pushes any
+ * visible pixel past the edge of the canvas. Measured on this image's real
+ * shape, so a round emoji can spin bigger than a square one.
+ */
+export function safeInset(source: Canvas2D, opts: RenderOptions, anim: Animation): number {
+  // Fill framing crops to the frame on purpose; keep the motion's own room.
+  if (opts.fit === 'cover' || anim.frames <= 1) return anim.inset
+  return insetFor(visibleEdges(source), source.width, source.height, opts, anim)
+}
+
+/** safeInset's math, on points centered on a w × h image. Exported for tests. */
+export function insetFor(
+  points: [number, number][],
+  width: number,
+  height: number,
+  opts: RenderOptions,
+  anim: Animation,
+): number {
+  const box = rotatedSize(width, height, opts.rotation)
+  // Size of one source pixel as a share of the frame, at inset 1.
+  const unit = (1 - opts.padding * 2) * Math.min(1 / box.w, 1 / box.h)
+  const rot = (opts.rotation * Math.PI) / 180
+  const c0 = Math.cos(rot)
+  const s0 = Math.sin(rot)
+  const limit = 0.5 - EDGE_MARGIN
+  let inset = 1
+  const samples = Math.max(120, anim.frames * 4)
+  for (let i = 0; i < samples; i++) {
+    const f = anim.at(i / samples)
+    const c = Math.cos(f.rotate ?? 0)
+    const s = Math.sin(f.rotate ?? 0)
+    const sx = f.scaleX ?? 1
+    const sy = f.scaleY ?? 1
+    const tx = f.x ?? 0
+    const ty = f.y ?? 0
+    for (const [px, py] of points) {
+      // Same order as drawFrame: flip, the image's own rotation, then the motion.
+      const u = opts.flip ? -px : px
+      const x0 = (u * c0 - py * s0) * sx
+      const y0 = (u * s0 + py * c0) * sy
+      const ax = (x0 * c - y0 * s) * unit
+      const ay = (x0 * s + y0 * c) * unit
+      if (ax > 0) inset = Math.min(inset, (limit - tx) / ax)
+      else if (ax < 0) inset = Math.min(inset, (limit + tx) / -ax)
+      if (ay > 0) inset = Math.min(inset, (limit - ty) / ay)
+      else if (ay < 0) inset = Math.min(inset, (limit + ty) / -ay)
+    }
+  }
+  return Math.max(0.3, inset)
+}
+
 /** Draws one frame of the emoji into ctx at size × size. */
 /**
  * Share of a rendered frame that is see-through (GIPHY rejects stickers whose
@@ -264,6 +352,87 @@ export function drawFrame(
     ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh)
   }
   ctx.restore()
+  // In front, twinkling around the emoji's edge.
+  if (transform.burst !== undefined) drawSparkles(ctx, size, transform.burst)
+}
+
+const SPARKLE_COLORS = ['#ffc531', '#ff9f1c', '#ffd966']
+// Angle around the emoji, distance from its center, size, and when it twinkles, all as fractions.
+export const SPARKLES = [
+  { angle: -2.2, reach: 0.36, size: 0.11, delay: 0 },
+  { angle: -0.5, reach: 0.37, size: 0.09, delay: 0.12 },
+  { angle: 0.55, reach: 0.36, size: 0.1, delay: 0.06 },
+  { angle: 2.5, reach: 0.38, size: 0.08, delay: 0.18 },
+  { angle: 1.6, reach: 0.4, size: 0.06, delay: 0.24 },
+  { angle: -1.3, reach: 0.4, size: 0.06, delay: 0.3 },
+]
+
+/**
+ * One frame of a sparkle burst at progress p (0 to 1): a few four-point stars
+ * that drift out from the emoji, twinkle and fade. Fixed positions rather than
+ * random ones, so the preview and the exported GIF match.
+ */
+function drawSparkles(ctx: CanvasRenderingContext2D, size: number, p: number) {
+  ctx.save()
+  SPARKLES.forEach((s, i) => {
+    const local = (p - s.delay) / (1 - 0.3)
+    if (local <= 0 || local >= 1) return
+    // Grows in, then shrinks away.
+    const scale = Math.sin(local * Math.PI)
+    const reach = s.reach * (0.85 + 0.15 * local)
+    const r = s.size * size * scale
+    if (r < 0.5) return
+    ctx.setTransform(
+      1,
+      0,
+      0,
+      1,
+      size / 2 + Math.cos(s.angle) * reach * size,
+      size / 2 + Math.sin(s.angle) * reach * size,
+    )
+    ctx.rotate(local * 0.6)
+    ctx.fillStyle = SPARKLE_COLORS[i % SPARKLE_COLORS.length]
+    // Four points joined by curves pulled toward the center.
+    const k = r * 0.18
+    ctx.beginPath()
+    ctx.moveTo(0, -r)
+    ctx.quadraticCurveTo(k, -k, r, 0)
+    ctx.quadraticCurveTo(k, k, 0, r)
+    ctx.quadraticCurveTo(-k, k, -r, 0)
+    ctx.quadraticCurveTo(-k, -k, 0, -r)
+    ctx.fill()
+  })
+  ctx.restore()
+}
+
+const OUTLINE_MAX = 0.08
+
+/**
+ * Adds a die-cut sticker border: the image's shape grown outward by
+ * `amount` (0 to 1, up to 8% of its longer side) and filled with `color`.
+ * The canvas grows to make room, so the border never gets cut off.
+ */
+export function addOutline(source: Canvas2D, amount: number, color: string): Canvas2D {
+  const r = Math.round(amount * OUTLINE_MAX * Math.max(source.width, source.height))
+  if (r < 1) return source
+  const out = makeCanvas(source.width + r * 2, source.height + r * 2)
+  const ctx = ctx2d(out)
+  // Stamp the shape in rings around itself. Several radii fill the middle of
+  // the border, so thin parts (a whisker, a thin letter) don't leave holes.
+  for (const radius of [r, r * 0.66, r * 0.33]) {
+    // About one stamp every 3 px around the ring.
+    const steps = Math.max(12, Math.ceil((Math.PI * 2 * radius) / 3))
+    for (let k = 0; k < steps; k++) {
+      const a = (k / steps) * Math.PI * 2
+      ctx.drawImage(source, r + Math.cos(a) * radius, r + Math.sin(a) * radius)
+    }
+  }
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, out.width, out.height)
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.drawImage(source, r, r)
+  return out
 }
 
 let tintCanvas: Canvas2D | null = null
