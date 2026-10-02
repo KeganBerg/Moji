@@ -30,6 +30,12 @@ const ko: Messages = {
   generate: '생성',
   generationsLeftOne: '오늘 남은 AI 생성 {n}회',
   generationsLeft: '오늘 남은 AI 생성 {n}회',
+  tryAgain: '다시 그리기',
+  tryAgainFree: '무료',
+  tryAgainTitleFree: '이 설명으로 새 버전을 무료로 그리기',
+  tryAgainTitle: '이 설명으로 새 버전 그리기 (AI 생성 1회 사용)',
+  fitCropped: '가장자리가 잘림',
+  fitNoBackground: '배경이 남아 있음',
   aiNote: 'AI 생성, 투명 배경',
   offlineNote: '오프라인 미리보기: 이 빌드에는 AI 생성이 연결되어 있지 않습니다',
 

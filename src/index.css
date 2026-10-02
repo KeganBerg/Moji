@@ -243,6 +243,69 @@ h2 {
   border-color: var(--accent);
 }
 
+/* Try again on an AI image, where the progress pill appears while it redraws. */
+.retry-bar {
+  position: absolute;
+  inset: auto auto 12px 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+}
+
+.retry-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease);
+}
+
+.retry-button:not(:has(.retry-free)) {
+  padding-inline-end: 12px;
+}
+
+.retry-button:hover {
+  border-color: var(--border-strong);
+}
+
+.retry-bar.is-flagged .retry-button {
+  border-color: var(--warn);
+}
+
+.retry-free {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
 .busy {
   position: absolute;
   inset: auto auto 16px 50%;
