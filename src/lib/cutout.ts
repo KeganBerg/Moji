@@ -186,6 +186,7 @@ export function removeBackground(d: Uint8ClampedArray, width: number, height: nu
     const keep = Math.min(1, (distAny(d, i, bgs) - tol) / tol)
     d[i + 3] = Math.round(d[i + 3] * Math.max(0, keep))
   }
+  defringe(d, isBg, width, height, bgs)
   let removed = 0
   for (let p = 0; p < n; p++)
     if (isBg[p]) {
@@ -193,6 +194,79 @@ export function removeBackground(d: Uint8ClampedArray, width: number, height: nu
       removed++
     }
   return removed
+}
+
+/**
+ * Edge pixels are a blend of the subject and the old background (a white rim
+ * on a dark backdrop leaves grey pixels around it). Left as they are, they
+ * draw a dark or light halo on any other background. For the two outermost
+ * rings of the subject, find the nearby inner color that, mixed with the
+ * background, best explains the pixel; if one does, use that color and make
+ * the pixel only as opaque as the mix says.
+ */
+function defringe(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number, bgs: Rgb[]) {
+  const n = w * h
+  // Rings in from the background: 1 touches it, 2 touches ring 1, 3 is deeper.
+  const ring = new Uint8Array(n)
+  for (let k = 1; k <= 3; k++)
+    for (let p = 0; p < n; p++) {
+      if (isBg[p] || ring[p]) continue
+      if (k === 3) {
+        ring[p] = 3
+        continue
+      }
+      const x = p % w
+      const prev = (q: number) => (k === 1 ? isBg[q] === 1 : ring[q] === k - 1)
+      if ((x > 0 && prev(p - 1)) || (x < w - 1 && prev(p + 1)) || (p >= w && prev(p - w)) || (p < n - w && prev(p + w)))
+        ring[p] = k
+    }
+  const out = new Uint8ClampedArray(d)
+  for (let p = 0; p < n; p++) {
+    const k = ring[p]
+    if (k !== 1 && k !== 2) continue
+    const i = p * 4
+    if (!d[i + 3]) continue
+    // The background color this pixel sits nearest to.
+    let bg = bgs[0]
+    for (const c of bgs) if (dist(d, i, c) < dist(d, i, bg)) bg = c
+    const x0 = p % w,
+      y0 = (p - x0) / w
+    let best = -1,
+      bestErr = 0.06,
+      bestA = 1
+    for (let dy = -2; dy <= 2; dy++)
+      for (let dx = -2; dx <= 2; dx++) {
+        const x = x0 + dx,
+          y = y0 + dy
+        if (x < 0 || y < 0 || x >= w || y >= h) continue
+        const q = y * w + x
+        if (ring[q] <= k) continue
+        const j = q * 4
+        // Project the pixel onto the line from the background to this color.
+        const fr = d[j] - bg[0],
+          fg = d[j + 1] - bg[1],
+          fb = d[j + 2] - bg[2]
+        const len2 = fr * fr + fg * fg + fb * fb
+        if (len2 < (0.15 * MAX_DIST) ** 2) continue
+        const pr = d[i] - bg[0],
+          pg = d[i + 1] - bg[1],
+          pb = d[i + 2] - bg[2]
+        const a = Math.max(0, Math.min(1, (pr * fr + pg * fg + pb * fb) / len2))
+        const err = Math.hypot(pr - a * fr, pg - a * fg, pb - a * fb) / MAX_DIST
+        if (err < bestErr) {
+          best = q
+          bestErr = err
+          bestA = a
+        }
+      }
+    if (best < 0) continue
+    const j = best * 4
+    out[i] = d[j]
+    out[i + 1] = d[j + 1]
+    out[i + 2] = d[j + 2]
+    out[i + 3] = Math.round(Math.min(d[i + 3], bestA * 255))
+  }
+  d.set(out)
 }
 
 /**
@@ -471,7 +545,7 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
   // lying on top of it sits farther out.
   const bodySolid = new Uint8Array(n)
   for (let p = 0; p < n; p++) bodySolid[p] = kept[p] && !onEdge(p) && distAny(d, p * 4, bodyColors) < 0.06 ? 1 : 0
-  const hugging = dilate(bodySolid, w, h, 9)
+  const hugging = dilate(bodySolid, w, h, 6)
   for (let layer = 0; layer < 4; layer++) {
     const peel: number[] = []
     for (let p = 0; p < n; p++)
@@ -487,6 +561,13 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
     if (!peel.length) break
     for (const p of peel) clear(p)
   }
+
+  // Last, anything thinner than a few pixels sticking out from the outline
+  // (a hair of stroke, a burr) goes. A smeared logo's outline is solid, so
+  // this only rounds its corners by a pixel or so.
+  const burrR = Math.max(6, Math.round(size * 0.008) * 3)
+  const smoothed = dilate(erode(kept, w, h, burrR), w, h, burrR + 1)
+  for (let p = 0; p < n; p++) if (kept[p] && !smoothed[p]) clear(p)
 
   // Crumbs: when a smear went, the loose bits it shed go too. Loose means not
   // attached to the body and nothing thick. Bits close together count as one
