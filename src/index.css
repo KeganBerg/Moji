@@ -187,8 +187,13 @@ h2 {
 }
 
 .checker {
-  background-color: var(--surface);
-  background-image: conic-gradient(var(--checker) 25%, transparent 0 50%, var(--checker) 0 75%, transparent 0);
+  background-color: var(--stage, var(--surface));
+  background-image: conic-gradient(
+    var(--stage-checker, var(--checker)) 25%,
+    transparent 0 50%,
+    var(--stage-checker, var(--checker)) 0 75%,
+    transparent 0
+  );
   background-size: 14px 14px;
 }
 
@@ -694,6 +699,8 @@ h2 {
   place-items: center;
   width: 36px;
   height: 36px;
+  border-radius: 8px;
+  background: var(--stage, transparent);
 }
 
 .motion-dot {
@@ -2097,4 +2104,32 @@ html[data-paused] .motion-dot {
 .destination .segmented-sm button {
   min-width: 0;
   padding: 0 8px;
+}
+
+/*
+ * A black emoji on a dark theme (or a white one on the light theme) would
+ * vanish into the preview, so the preview turns the other way for it.
+ * data-tone is set from the emoji's own colors (subjectTone in lib/render).
+ */
+:root[data-tone='light'] {
+  --stage: #2a2a30;
+  --stage-checker: #232328;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-tone='light'] {
+    --stage: initial;
+    --stage-checker: initial;
+  }
+  :root[data-tone='dark'] {
+    --stage: #ececef;
+    --stage-checker: #dcdce0;
+  }
+}
+:root[data-season='halloween'][data-tone='light'] {
+  --stage: initial;
+  --stage-checker: initial;
+}
+:root[data-season='halloween'][data-tone='dark'] {
+  --stage: #ece6df;
+  --stage-checker: #ddd5cc;
 }

@@ -77,6 +77,7 @@ const es: Messages = {
   keep: 'Mantener',
   remove: 'Quitar',
   strength: 'Intensidad',
+  insideGaps: 'Huecos internos',
   framing: 'Encuadre',
   fit: 'Encajar',
   fill: 'Rellenar',

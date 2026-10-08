@@ -77,6 +77,7 @@ const zh: Messages = {
   keep: '保留',
   remove: '移除',
   strength: '强度',
+  insideGaps: '内部空隙',
   framing: '画面适配',
   fit: '完整显示',
   fill: '填满',

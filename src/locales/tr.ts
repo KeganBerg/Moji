@@ -77,6 +77,7 @@ const tr: Messages = {
   keep: 'Koru',
   remove: 'Kaldır',
   strength: 'Yoğunluk',
+  insideGaps: 'İç boşluklar',
   framing: 'Çerçeveleme',
   fit: 'Sığdır',
   fill: 'Doldur',

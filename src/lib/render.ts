@@ -1,6 +1,6 @@
 import type { Animation, FrameTransform } from './animations'
 import { checkFit, type FitReport } from '../../supabase/functions/_shared/fit'
-import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
+import { DEFAULT_STRENGTH, removeBackground, suggestCutout, type CutoutOptions } from './cutout'
 
 export type Fit = 'contain' | 'cover'
 
@@ -104,16 +104,44 @@ export function opaqueBounds(
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
 }
 
+export interface CutoutReport {
+  /** Background-colored spots inside the subject (the inside of an O). */
+  holes: number
+  holesCleared: boolean
+}
+
+const reports = new WeakMap<Canvas2D, CutoutReport>()
+
+/** What the background removal found in a prepared source, if it ran. */
+export function cutoutReport(source: Canvas2D | null): CutoutReport | null {
+  return (source && reports.get(source)) ?? null
+}
+
+/** Pixel art upscales in whole steps with hard edges. Only small sources with few colors count. */
+export function isPixelArt(d: Uint8ClampedArray, width: number, height: number): boolean {
+  if (Math.max(width, height) > 128) return false
+  const colors = new Set<number>()
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue
+    // Anti-aliased edges leave in-between alpha; pixel art has none.
+    if (d[i + 3] !== 255) return false
+    colors.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
+    if (colors.size > 48) return false
+  }
+  return colors.size > 1
+}
+
 /**
  * Loads an image into a working canvas: downscaled in halving steps (which
  * keeps small emoji sharp) and optionally trimmed to its visible pixels so the
- * emoji fills the frame.
+ * emoji fills the frame. Pixel art is blown up in whole steps with hard edges
+ * instead, so it stays crisp at any export size.
  */
 export function prepareSource(
   img: CanvasImageSource & { width: number; height: number },
   trim: boolean,
-  /** Background removal strength, or null to keep the full image. */
-  cutout: number | null = null,
+  /** Background removal strength (or strength and how to treat enclosed spots), or null to keep the full image. */
+  cutout: number | { strength: number; holes?: CutoutOptions['holes'] } | null = null,
   /** Largest side to keep; raise it for exports bigger than WORKING_SIZE so they aren't upscaled. */
   maxSize = WORKING_SIZE,
 ): Canvas2D {
@@ -134,19 +162,36 @@ export function prepareSource(
   const octx = ctx2d(out)
   octx.imageSmoothingQuality = 'high'
   octx.drawImage(current, 0, 0, out.width, out.height)
+  const pixelArt = isPixelArt(octx.getImageData(0, 0, out.width, out.height).data, out.width, out.height)
+  let report: CutoutReport | null = null
   if (cutout !== null) {
+    const { strength, holes } = typeof cutout === 'number' ? { strength: cutout, holes: undefined } : cutout
     const data = octx.getImageData(0, 0, out.width, out.height)
-    removeBackground(data.data, out.width, out.height, cutout)
+    report = { holes: 0, holesCleared: false }
+    removeBackground(data.data, out.width, out.height, strength, { holes, crisp: pixelArt, report })
     octx.putImageData(data, 0, 0)
   }
   snapAlpha(octx, out.width, out.height)
-  if (!trim) return out
-
-  const bounds = opaqueBounds(octx.getImageData(0, 0, out.width, out.height).data, out.width, out.height)
-  if (!bounds || (bounds.w === out.width && bounds.h === out.height)) return out
-  const trimmed = makeCanvas(bounds.w, bounds.h)
-  ctx2d(trimmed).drawImage(out, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h)
-  return trimmed
+  let result = out
+  if (trim) {
+    const bounds = opaqueBounds(octx.getImageData(0, 0, out.width, out.height).data, out.width, out.height)
+    if (bounds && (bounds.w !== out.width || bounds.h !== out.height)) {
+      result = makeCanvas(bounds.w, bounds.h)
+      ctx2d(result).drawImage(out, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h)
+    }
+  }
+  if (pixelArt) {
+    const k = Math.floor(maxSize / Math.max(result.width, result.height))
+    if (k >= 2) {
+      const big = makeCanvas(result.width * k, result.height * k)
+      const bctx = ctx2d(big)
+      bctx.imageSmoothingEnabled = false
+      bctx.drawImage(result, 0, 0, big.width, big.height)
+      result = big
+    }
+  }
+  if (report) reports.set(result, report)
+  return result
 }
 
 /**
@@ -174,9 +219,10 @@ function snapAlpha(ctx: CanvasRenderingContext2D, w: number, h: number) {
 const edgeCache = new WeakMap<Canvas2D, [number, number][]>()
 
 /**
- * The left and right ends of the visible pixels on about 64 rows, centered on
- * the image. Enough to find how far the emoji reaches when it moves, turns or
- * stretches, without testing every pixel.
+ * The corners of the convex hull around every visible pixel, centered on
+ * the image. However the emoji moves, turns or stretches, its farthest point
+ * is always one of these, so testing them is exact: a small detail beside the
+ * subject (a sparkle, a dot) or a faint soft edge can't slip between samples.
  */
 function visibleEdges(source: Canvas2D): [number, number][] {
   const cached = edgeCache.get(source)
@@ -184,24 +230,54 @@ function visibleEdges(source: Canvas2D): [number, number][] {
   const { width: w, height: h } = source
   const data = ctx2d(source).getImageData(0, 0, w, h).data
   const points: [number, number][] = []
-  const step = Math.max(1, Math.floor(h / 64))
-  const rows = new Set<number>()
-  for (let y = 0; y < h; y += step) rows.add(y)
-  rows.add(h - 1)
-  for (const y of rows) {
+  for (let y = 0; y < h; y++) {
     let left = -1
     let right = -1
     for (let x = 0; x < w; x++)
-      if (data[(y * w + x) * 4 + 3] >= 128) {
+      if (data[(y * w + x) * 4 + 3] >= 8) {
         if (left < 0) left = x
         right = x
       }
-    if (left >= 0) points.push([left - w / 2, y + 0.5 - h / 2], [right + 1 - w / 2, y + 0.5 - h / 2])
+    // Each pixel's outer corners, so the hull wraps whole pixels.
+    if (left >= 0)
+      points.push(
+        [left - w / 2, y - h / 2],
+        [left - w / 2, y + 1 - h / 2],
+        [right + 1 - w / 2, y - h / 2],
+        [right + 1 - w / 2, y + 1 - h / 2],
+      )
   }
   // A blank image still needs an answer; treat it as its full box.
-  if (points.length === 0) points.push([-w / 2, -h / 2], [w / 2, h / 2])
-  edgeCache.set(source, points)
-  return points
+  const hull = points.length
+    ? convexHull(points)
+    : ([
+        [-w / 2, -h / 2],
+        [w / 2, -h / 2],
+        [w / 2, h / 2],
+        [-w / 2, h / 2],
+      ] as [number, number][])
+  edgeCache.set(source, hull)
+  return hull
+}
+
+/** Andrew's monotone chain. Exported for tests. */
+export function convexHull(points: [number, number][]): [number, number][] {
+  const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  if (pts.length < 3) return pts
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const lower: [number, number][] = []
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+    lower.push(p)
+  }
+  const upper: [number, number][] = []
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+    upper.push(p)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
 }
 
 /** How far inside the frame's edge everything stays, as a share of the frame. */
@@ -496,9 +572,65 @@ export function fitOf(img: CanvasImageSource & { width: number; height: number }
   return checkFit(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height)
 }
 
+/**
+ * Whether the visible part of an emoji is mostly very dark or very light,
+ * so the preview can sit it on a background it shows up against.
+ */
+export function subjectTone(source: Canvas2D): 'dark' | 'light' | null {
+  const { width: w, height: h } = source
+  const d = ctx2d(source).getImageData(0, 0, w, h).data
+  const step = Math.max(1, Math.floor((w * h) / 20000)) * 4
+  let sum = 0,
+    n = 0
+  for (let i = 0; i < d.length; i += step)
+    if (d[i + 3] >= 128) {
+      sum += d[i] * 0.2126 + d[i + 1] * 0.7152 + d[i + 2] * 0.0722
+      n++
+    }
+  if (!n) return null
+  const mean = sum / n / 255
+  return mean < 0.22 ? 'dark' : mean > 0.85 ? 'light' : null
+}
+
 export { makeCanvas, ctx2d }
 
-export function loadImage(file: Blob): Promise<HTMLImageElement> {
+/** Longest side an SVG is drawn at: enough for the biggest export (Instagram's 1024 px). */
+const SVG_SIZE = 1024
+
+/**
+ * An SVG's shape from its width/height or viewBox. Its own size is often a
+ * 24 px icon, or missing (browsers then guess 150 × 150, even for a wide
+ * logo), so it's drawn at SVG_SIZE on the long side instead: vectors stay
+ * sharp at any size. Exported for tests.
+ */
+export function svgAspect(text: string): number | null {
+  const tag = /<svg\b[^>]*>/i.exec(text)?.[0]
+  if (!tag) return null
+  const attr = (name: string) => new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i').exec(tag)?.[1]
+  const num = (v?: string) => (v && !v.trim().endsWith('%') ? parseFloat(v) : NaN)
+  const w = num(attr('width')),
+    h = num(attr('height'))
+  if (w > 0 && h > 0) return w / h
+  const box = attr('viewBox')
+    ?.trim()
+    .split(/[\s,]+/)
+    .map(Number)
+  if (box && box.length === 4 && box[2] > 0 && box[3] > 0) return box[2] / box[3]
+  return null
+}
+
+export async function loadImage(file: Blob): Promise<HTMLImageElement> {
+  const img = await decodeImage(file)
+  if (file.type === 'image/svg+xml') {
+    const aspect =
+      svgAspect(await file.text()) ?? (img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1)
+    img.width = aspect >= 1 ? SVG_SIZE : Math.round(SVG_SIZE * aspect)
+    img.height = aspect >= 1 ? Math.round(SVG_SIZE / aspect) : SVG_SIZE
+  }
+  return img
+}
+
+function decodeImage(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()

@@ -77,6 +77,7 @@ const ru: Messages = {
   keep: 'Оставить',
   remove: 'Убрать',
   strength: 'Сила',
+  insideGaps: 'Внутренние просветы',
   framing: 'Кадрирование',
   fit: 'Вписать',
   fill: 'Заполнить',

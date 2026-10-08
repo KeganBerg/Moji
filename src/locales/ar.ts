@@ -77,6 +77,7 @@ const ar: Messages = {
   keep: 'إبقاء',
   remove: 'إزالة',
   strength: 'الشدة',
+  insideGaps: 'الفراغات الداخلية',
   framing: 'التأطير',
   fit: 'احتواء',
   fill: 'ملء',

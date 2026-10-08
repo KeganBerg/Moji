@@ -79,6 +79,7 @@ export const en = {
   keep: 'Keep',
   remove: 'Remove',
   strength: 'Strength',
+  insideGaps: 'Inside gaps',
   framing: 'Framing',
   fit: 'Fit',
   fill: 'Fill',

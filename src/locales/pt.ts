@@ -77,6 +77,7 @@ const pt: Messages = {
   keep: 'Manter',
   remove: 'Remover',
   strength: 'Intensidade',
+  insideGaps: 'Espaços internos',
   framing: 'Enquadramento',
   fit: 'Encaixar',
   fill: 'Preencher',

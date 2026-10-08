@@ -77,6 +77,7 @@ const vi: Messages = {
   keep: 'Giữ',
   remove: 'Xóa',
   strength: 'Độ mạnh',
+  insideGaps: 'Khoảng trống bên trong',
   framing: 'Căn khung',
   fit: 'Vừa khung',
   fill: 'Lấp đầy',

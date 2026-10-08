@@ -77,6 +77,7 @@ const de: Messages = {
   keep: 'Behalten',
   remove: 'Entfernen',
   strength: 'Stärke',
+  insideGaps: 'Innere Lücken',
   framing: 'Bildausschnitt',
   fit: 'Einpassen',
   fill: 'Füllen',

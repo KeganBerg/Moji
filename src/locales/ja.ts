@@ -77,6 +77,7 @@ const ja: Messages = {
   keep: '残す',
   remove: '削除',
   strength: '強さ',
+  insideGaps: '内側のすき間',
   framing: 'フレーミング',
   fit: '全体を表示',
   fill: '枠いっぱい',

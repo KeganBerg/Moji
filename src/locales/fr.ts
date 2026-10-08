@@ -77,6 +77,7 @@ const fr: Messages = {
   keep: 'Garder',
   remove: 'Retirer',
   strength: 'Intensité',
+  insideGaps: 'Creux intérieurs',
   framing: 'Cadrage',
   fit: 'Adapter',
   fill: 'Remplir',

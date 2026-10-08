@@ -77,6 +77,7 @@ const ko: Messages = {
   keep: '유지',
   remove: '제거',
   strength: '강도',
+  insideGaps: '안쪽 빈 공간',
   framing: '프레이밍',
   fit: '맞추기',
   fill: '채우기',

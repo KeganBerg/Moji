@@ -77,6 +77,7 @@ const hi: Messages = {
   keep: 'रखें',
   remove: 'हटाएं',
   strength: 'तीव्रता',
+  insideGaps: 'अंदर की खाली जगह',
   framing: 'फ़्रेमिंग',
   fit: 'फ़िट',
   fill: 'फ़िल',

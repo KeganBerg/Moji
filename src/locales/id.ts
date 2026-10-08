@@ -77,6 +77,7 @@ const id: Messages = {
   keep: 'Pertahankan',
   remove: 'Hapus',
   strength: 'Kekuatan',
+  insideGaps: 'Celah di dalam',
   framing: 'Pembingkaian',
   fit: 'Muat',
   fill: 'Penuhi',
