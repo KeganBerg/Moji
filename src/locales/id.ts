@@ -78,6 +78,8 @@ const id: Messages = {
   remove: 'Hapus',
   strength: 'Kekuatan',
   insideGaps: 'Celah di dalam',
+  removingBackground: 'Menghapus latar',
+  errRemoveBg: 'Latar foto ini tidak bisa dihapus. Periksa koneksimu lalu coba lagi.',
   framing: 'Pembingkaian',
   fit: 'Muat',
   fill: 'Penuhi',

@@ -78,6 +78,8 @@ const es: Messages = {
   remove: 'Quitar',
   strength: 'Intensidad',
   insideGaps: 'Huecos internos',
+  removingBackground: 'Quitando el fondo',
+  errRemoveBg: 'No se pudo quitar el fondo de esta foto. Revisa tu conexión e inténtalo de nuevo.',
   framing: 'Encuadre',
   fit: 'Encajar',
   fill: 'Rellenar',

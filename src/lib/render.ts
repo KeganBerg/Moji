@@ -1,6 +1,7 @@
 import type { Animation, FrameTransform } from './animations'
 import { checkFit, type FitReport } from '../../supabase/functions/_shared/fit'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout, type CutoutOptions } from './cutout'
+import { applyMask } from './mask'
 
 export type Fit = 'contain' | 'cover'
 
@@ -141,7 +142,7 @@ export function prepareSource(
   img: CanvasImageSource & { width: number; height: number },
   trim: boolean,
   /** Background removal strength (or strength and how to treat enclosed spots), or null to keep the full image. */
-  cutout: number | { strength: number; holes?: CutoutOptions['holes'] } | null = null,
+  cutout: number | { strength: number; holes?: CutoutOptions['holes']; mask?: Float32Array } | null = null,
   /** Largest side to keep; raise it for exports bigger than WORKING_SIZE so they aren't upscaled. */
   maxSize = WORKING_SIZE,
 ): Canvas2D {
@@ -165,10 +166,12 @@ export function prepareSource(
   const pixelArt = isPixelArt(octx.getImageData(0, 0, out.width, out.height).data, out.width, out.height)
   let report: CutoutReport | null = null
   if (cutout !== null) {
-    const { strength, holes } = typeof cutout === 'number' ? { strength: cutout, holes: undefined } : cutout
+    const { strength, holes, mask } = typeof cutout === 'number' ? { strength: cutout } : cutout
     const data = octx.getImageData(0, 0, out.width, out.height)
     report = { holes: 0, holesCleared: false }
-    removeBackground(data.data, out.width, out.height, strength, { holes, crisp: pixelArt, report })
+    // A photo's subject, found by the model (lib/segment); otherwise fill in from a plain border.
+    if (mask) applyMask(data.data, out.width, out.height, mask, strength)
+    else removeBackground(data.data, out.width, out.height, strength, { holes, crisp: pixelArt, report })
     octx.putImageData(data, 0, 0)
   }
   snapAlpha(octx, out.width, out.height)
@@ -561,6 +564,18 @@ export function looksCuttable(img: CanvasImageSource & { width: number; height: 
   for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
   const share = kept / (c.width * c.height)
   return share >= 0.03 && share <= 0.9
+}
+
+/** Whether an image has no see-through pixels of its own (a photo, not a cutout), checked on a small copy. */
+export function isOpaque(img: CanvasImageSource & { width: number; height: number }): boolean {
+  const scale = Math.min(1, 96 / Math.max(img.width, img.height))
+  const c = makeCanvas(img.width * scale, img.height * scale)
+  const ctx = ctx2d(c)
+  ctx.drawImage(img, 0, 0, c.width, c.height)
+  const d = ctx.getImageData(0, 0, c.width, c.height).data
+  let clear = 0
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 250) clear++
+  return clear <= (d.length / 4) * 0.01
 }
 
 /** The server's fit check (cut off, background left in, blank), run on a small copy. */

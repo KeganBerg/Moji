@@ -78,6 +78,8 @@ const ar: Messages = {
   remove: 'إزالة',
   strength: 'الشدة',
   insideGaps: 'الفراغات الداخلية',
+  removingBackground: 'جارٍ إزالة الخلفية',
+  errRemoveBg: 'تعذّرت إزالة خلفية هذه الصورة. تحقّق من اتصالك وحاول مرة أخرى.',
   framing: 'التأطير',
   fit: 'احتواء',
   fill: 'ملء',

@@ -78,6 +78,8 @@ const pt: Messages = {
   remove: 'Remover',
   strength: 'Intensidade',
   insideGaps: 'Espaços internos',
+  removingBackground: 'Removendo o fundo',
+  errRemoveBg: 'Não foi possível remover o fundo desta foto. Verifique sua conexão e tente de novo.',
   framing: 'Enquadramento',
   fit: 'Encaixar',
   fill: 'Preencher',

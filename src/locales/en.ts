@@ -80,6 +80,8 @@ export const en = {
   remove: 'Remove',
   strength: 'Strength',
   insideGaps: 'Inside gaps',
+  removingBackground: 'Removing background',
+  errRemoveBg: "Couldn't remove this photo's background. Check your connection and try again.",
   framing: 'Framing',
   fit: 'Fit',
   fill: 'Fill',

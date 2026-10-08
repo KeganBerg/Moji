@@ -78,6 +78,8 @@ const vi: Messages = {
   remove: 'Xóa',
   strength: 'Độ mạnh',
   insideGaps: 'Khoảng trống bên trong',
+  removingBackground: 'Đang xóa nền',
+  errRemoveBg: 'Không xóa được nền của ảnh này. Hãy kiểm tra kết nối và thử lại.',
   framing: 'Căn khung',
   fit: 'Vừa khung',
   fill: 'Lấp đầy',

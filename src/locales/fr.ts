@@ -78,6 +78,8 @@ const fr: Messages = {
   remove: 'Retirer',
   strength: 'Intensité',
   insideGaps: 'Creux intérieurs',
+  removingBackground: 'Suppression du fond',
+  errRemoveBg: 'Impossible de supprimer le fond de cette photo. Vérifie ta connexion et réessaie.',
   framing: 'Cadrage',
   fit: 'Adapter',
   fill: 'Remplir',

@@ -78,6 +78,8 @@ const it: Messages = {
   remove: 'Rimuovi',
   strength: 'Intensità',
   insideGaps: 'Spazi interni',
+  removingBackground: 'Rimozione dello sfondo',
+  errRemoveBg: 'Impossibile rimuovere lo sfondo di questa foto. Controlla la connessione e riprova.',
   framing: 'Inquadratura',
   fit: 'Adatta',
   fill: 'Riempi',

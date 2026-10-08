@@ -78,6 +78,9 @@ const de: Messages = {
   remove: 'Entfernen',
   strength: 'Stärke',
   insideGaps: 'Innere Lücken',
+  removingBackground: 'Hintergrund wird entfernt',
+  errRemoveBg:
+    'Der Hintergrund dieses Fotos konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut.',
   framing: 'Bildausschnitt',
   fit: 'Einpassen',
   fill: 'Füllen',

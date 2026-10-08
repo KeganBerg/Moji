@@ -78,6 +78,8 @@ const ru: Messages = {
   remove: 'Убрать',
   strength: 'Сила',
   insideGaps: 'Внутренние просветы',
+  removingBackground: 'Удаляем фон',
+  errRemoveBg: 'Не удалось удалить фон этого фото. Проверьте подключение и попробуйте снова.',
   framing: 'Кадрирование',
   fit: 'Вписать',
   fill: 'Заполнить',

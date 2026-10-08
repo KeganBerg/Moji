@@ -78,6 +78,8 @@ const hi: Messages = {
   remove: 'हटाएं',
   strength: 'तीव्रता',
   insideGaps: 'अंदर की खाली जगह',
+  removingBackground: 'बैकग्राउंड हटाया जा रहा है',
+  errRemoveBg: 'इस फ़ोटो का बैकग्राउंड नहीं हट सका। अपना कनेक्शन जाँचें और फिर से कोशिश करें।',
   framing: 'फ़्रेमिंग',
   fit: 'फ़िट',
   fill: 'फ़िल',

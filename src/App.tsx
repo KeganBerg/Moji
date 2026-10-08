@@ -59,6 +59,7 @@ import {
   fitOf,
   loadImage,
   cutoutReport,
+  isOpaque,
   subjectTone,
   looksCuttable,
   prepareSource,
@@ -83,6 +84,10 @@ interface HistoryItem {
   cutoutStrength: number
   /** Background-colored gaps inside the subject (the inside of an O): decided automatically until picked. */
   cutoutHoles: 'auto' | 'keep' | 'clear'
+  /** A photo without a plain background: Remove finds its subject with a model (lib/segment). */
+  segment: boolean
+  /** That model's subject map, once it has run. */
+  mask?: Float32Array
   /** What the cutout was when the image arrived, for Reset. */
   cutoutDefault: boolean
   thumb: string
@@ -214,7 +219,13 @@ function Editor() {
         ? prepareSource(
             active.image,
             trim,
-            active.cutout ? { strength: active.cutoutStrength, holes: active.cutoutHoles } : null,
+            !active.cutout
+              ? null
+              : active.segment
+                ? active.mask
+                  ? { strength: active.cutoutStrength, mask: active.mask }
+                  : null
+                : { strength: active.cutoutStrength, holes: active.cutoutHoles },
             workingSize,
           )
         : null,
@@ -229,6 +240,35 @@ function Editor() {
     () => (tuned && outline > 0 ? addOutline(tuned, outline, outlineColor) : tuned),
     [tuned, outline, outlineColor],
   )
+  // Find a photo's subject the first time its background is removed. The
+  // model loads only then, and the result is kept with the image.
+  const [segmenting, setSegmenting] = useState(false)
+  const needsMask = !!active && active.cutout && active.segment && !active.mask
+  useEffect(() => {
+    if (!needsMask || !active) return
+    const { id, image } = active
+    let cancelled = false
+    setSegmenting(true)
+    import('./lib/segment')
+      .then(({ subjectMask }) => subjectMask(image))
+      .then((mask) => {
+        if (!cancelled) setHistory((h) => h.map((item) => (item.id === id ? { ...item, mask } : item)))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setError({ key: 'errRemoveBg' })
+        setHistory((h) => h.map((item) => (item.id === id ? { ...item, cutout: false } : item)))
+      })
+      .finally(() => {
+        if (!cancelled) setSegmenting(false)
+      })
+    return () => {
+      cancelled = true
+      setSegmenting(false)
+    }
+    // Runs again only when a different image needs its subject found.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsMask, active?.id])
   // A black emoji on a dark theme (or a white one on the light theme) gets a contrasting preview.
   const tone = useMemo(() => (source ? subjectTone(source) : null), [source])
   useEffect(() => {
@@ -320,6 +360,8 @@ function Editor() {
       // Uploads on a plain background (a moon on black, a logo on white) get cut out
       // automatically. Generated images already come with a transparent background.
       const cutout = fromUpload && looksCuttable(image)
+      // A photo on a busy background can't be cut out by color; Remove asks the model instead.
+      const segment = fromUpload && !cutout && isOpaque(image)
       const item: HistoryItem = {
         id: nextId.current++,
         image,
@@ -327,6 +369,7 @@ function Editor() {
         cutoutDefault: cutout,
         cutoutStrength: DEFAULT_STRENGTH,
         cutoutHoles: 'auto',
+        segment,
         thumb: URL.createObjectURL(blob),
         name: sanitizeName(suggestedName, 'discord'),
         generated,
@@ -597,7 +640,7 @@ function Editor() {
             else if (files.length) setError({ key: 'errNotImage' })
           }}
         >
-          <div ref={canvasBox} className={`canvas checker${generating ? ' is-busy' : ''}`}>
+          <div ref={canvasBox} className={`canvas checker${generating || segmenting ? ' is-busy' : ''}`}>
             {source ? (
               <EmojiCanvas
                 source={source}
@@ -647,14 +690,14 @@ function Editor() {
                 </button>
               </div>
             )}
-            {generating && (
+            {(generating || segmenting) && (
               <div className="busy" aria-hidden>
                 <LoaderCircle className="spin" size={18} />
-                {t('generating')}
+                {t(generating ? 'generating' : 'removingBackground')}
               </div>
             )}
             <span className="sr-only" role="status">
-              {generating ? t('generating') : ''}
+              {generating ? t('generating') : segmenting ? t('removingBackground') : ''}
             </span>
           </div>
 

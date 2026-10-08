@@ -78,6 +78,8 @@ const tr: Messages = {
   remove: 'Kaldır',
   strength: 'Yoğunluk',
   insideGaps: 'İç boşluklar',
+  removingBackground: 'Arka plan kaldırılıyor',
+  errRemoveBg: 'Bu fotoğrafın arka planı kaldırılamadı. Bağlantını kontrol edip tekrar dene.',
   framing: 'Çerçeveleme',
   fit: 'Sığdır',
   fill: 'Doldur',
