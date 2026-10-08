@@ -432,10 +432,65 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
   for (const s of groupSize) largest = Math.max(largest, s)
   const minGroup = Math.max(4, largest * 0.004)
   for (let p = 0; p < n; p++) if (kept[p] && groupSize[groups.labels[p]] < minGroup) clear(p)
+  // The rest only follows a real smear, not a stray false alarm.
+  let smearSize = 0
+  for (let p = 0; p < n; p++) smearSize += smeared[p]
+  if (smearSize < total * 0.03) return
+
+  // Stubs: where streaks ran into the subject, their thin ends stay stuck to
+  // its outline. Near the smear, keep only what the body's own shape (the
+  // opening at the core size) covers.
+  const nearSmear = dilate(smeared, w, h, coreR)
+  const smearArea = dilate(smeared, w, h, coreR * 3)
+  const shape = dilate(erode(kept, w, h, coreR), w, h, coreR)
+  for (let p = 0; p < n; p++) if (kept[p] && nearSmear[p] && !shape[p]) clear(p)
+
+  // A band of stroke lying flush along the outline has the body's shape, so
+  // peel it by color instead: near the smear, outline pixels that match the
+  // smear's colors and none of the body's main colors go, a layer at a time.
+  const onEdge = (p: number) => {
+    const x = p % w
+    return (
+      (x > 0 && !kept[p - 1]) || (x < w - 1 && !kept[p + 1]) || (p >= w && !kept[p - w]) || (p < n - w && !kept[p + w])
+    )
+  }
+  // The body's colors: its inside, plus the main colors of its outline away
+  // from the smear (an outline ring like a white rim is thin, so not inside).
+  const smearPixels: number[] = []
+  const insidePixels: number[] = []
+  const outlinePixels: number[] = []
+  for (let p = 0; p < n; p++) {
+    if (smeared[p]) smearPixels.push(p)
+    else if (kept[p] && core[p]) insidePixels.push(p)
+    else if (kept[p] && !nearSmear[p]) outlinePixels.push(p)
+  }
+  const smearColors = palette(d, smearPixels, 0.003, 48)
+  const bodyColors = [...palette(d, insidePixels, 0.02, 12), ...palette(d, outlinePixels, 0.05, 6)]
+  // An outline ring hugs the body (within a few pixels of its solid colors)
+  // and stays even when its colors look like the smear's; a band of stroke
+  // lying on top of it sits farther out.
+  const bodySolid = new Uint8Array(n)
+  for (let p = 0; p < n; p++) bodySolid[p] = kept[p] && !onEdge(p) && distAny(d, p * 4, bodyColors) < 0.06 ? 1 : 0
+  const hugging = dilate(bodySolid, w, h, 9)
+  for (let layer = 0; layer < 4; layer++) {
+    const peel: number[] = []
+    for (let p = 0; p < n; p++)
+      if (
+        kept[p] &&
+        smearArea[p] &&
+        !hugging[p] &&
+        onEdge(p) &&
+        distAny(d, p * 4, smearColors) < 0.1 &&
+        distAny(d, p * 4, bodyColors) > 0.22
+      )
+        peel.push(p)
+    if (!peel.length) break
+    for (const p of peel) clear(p)
+  }
+
   // Crumbs: when a smear went, the loose bits it shed go too. Loose means not
   // attached to the body and nothing thick. Bits close together count as one
   // (so a word stays whole) and a group goes when it's tiny.
-  if (!smeared.some(Boolean)) return
   const loose = new Uint8Array(n)
   for (let p = 0; p < n; p++) loose[p] = kept[p] && !main[p] ? 1 : 0
   const bits = label(loose, w, h)
@@ -464,10 +519,9 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
     crumbSize[id]++
     if (attached[bits.labels[p]]) solid[id] = 1
   }
-  // Specks right by the smear go even when they sit near something solid.
-  const nearSmear = dilate(smeared, w, h, coreR)
+  // Specks in the smear's area go even when they sit near something solid.
   const touch = new Uint8Array(bits.sizes.length)
-  for (let p = 0; p < n; p++) if (bits.labels[p] && nearSmear[p]) touch[bits.labels[p]] = 1
+  for (let p = 0; p < n; p++) if (bits.labels[p] && smearArea[p]) touch[bits.labels[p]] = 1
   for (let p = 0; p < n; p++) {
     if (!loose[p]) continue
     const id = crumbs.labels[p]
