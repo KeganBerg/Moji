@@ -312,6 +312,81 @@ describe('background cutout', () => {
     // The crater is as dark as the sky but isn't connected to it.
     expect(m.at(22, 18)).toBe(255)
   })
+
+  // A size×size canvas filled by `paint(x, y)` → grey level, fully opaque.
+  function canvas(size: number, paint: (x: number, y: number) => number | [number, number, number]) {
+    const d = new Uint8ClampedArray(size * size * 4)
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const v = paint(x, y)
+        d.set([...(typeof v === 'number' ? [v, v, v] : v), 255], (y * size + x) * 4)
+      }
+    return { d, at: (x: number, y: number) => d[(y * size + x) * 4 + 3] }
+  }
+  const inDisc = (x: number, y: number, cx: number, cy: number, r: number) => (x - cx) ** 2 + (y - cy) ** 2 < r * r
+
+  it('removes a baked-in light checkerboard', () => {
+    // Web "transparent" PNGs often have the white and light grey squares saved into the pixels.
+    const c = canvas(64, (x, y) => (inDisc(x, y, 32, 32, 18) ? [200, 40, 40] : ((x >> 3) + (y >> 3)) % 2 ? 204 : 255))
+    expect(suggestCutout(c.d, 64, 64)).toBe(true)
+    removeBackground(c.d, 64, 64, DEFAULT_STRENGTH)
+    expect(c.at(0, 0)).toBe(0)
+    expect(c.at(12, 3)).toBe(0)
+    expect(c.at(60, 60)).toBe(0)
+    expect(c.at(32, 32)).toBe(255)
+  })
+
+  it("doesn't mistake a subject touching the edge for a second background color", () => {
+    // A dark rounded tile filling most of a white canvas, touching all four edges.
+    const c = canvas(64, (x, y) => (Math.abs(x - 32) + Math.abs(y - 32) < 44 ? 25 : 255))
+    removeBackground(c.d, 64, 64, DEFAULT_STRENGTH)
+    expect(c.at(0, 0)).toBe(0)
+    expect(c.at(32, 0)).toBe(255)
+    expect(c.at(32, 32)).toBe(255)
+  })
+
+  it('drops a streaky brushstroke behind the subject but keeps it whole', () => {
+    // A badge on near-black, with a light grey brushstroke of thin diagonal
+    // streaks running out from behind it, like a grunge logo.
+    const c = canvas(128, (x, y) => {
+      if (inDisc(x, y, 64, 76, 30)) return inDisc(x, y, 64, 76, 26) ? [30, 140, 70] : 240
+      // The stroke runs down-left to up-right; its streaks run the same way.
+      const inStroke = x > 16 && x < 112 && y > 10 && y < 60 && Math.abs(x + y - 100) < 30
+      return inStroke && (x + y) % 5 < 3 ? 170 : 22
+    })
+    removeBackground(c.d, 128, 128, DEFAULT_STRENGTH)
+    // At most a short stub can remain where a streak meets the rim.
+    let left = 0
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) if (c.at(x, y) > 0 && !inDisc(x, y, 64, 76, 34)) left++
+    expect(left).toBe(0)
+    expect(c.at(64, 76)).toBe(255)
+    expect(c.at(64, 49)).toBe(255) // the badge's light rim, right where the stroke meets it
+  })
+
+  it('keeps fine text-like detail and solid thin parts next to the subject', () => {
+    const c = canvas(128, (x, y) => {
+      if (inDisc(x, y, 64, 50, 30)) return 30
+      // A "word" of upright letter stems right under it, 2px apart.
+      if (y >= 84 && y < 92 && x >= 30 && x < 98 && x % 4 < 2) return 30
+      // A lollipop stick.
+      if (x >= 62 && x < 66 && y >= 92 && y < 124) return 30
+      return 255
+    })
+    removeBackground(c.d, 128, 128, DEFAULT_STRENGTH)
+    expect(c.at(32, 86)).toBe(255)
+    expect(c.at(93, 86)).toBe(255)
+    expect(c.at(63, 120)).toBe(255)
+  })
+
+  it('drops lone specks floating in the background', () => {
+    const c = canvas(128, (x, y) =>
+      inDisc(x, y, 64, 64, 36) || (x === 10 && y === 10) || (x >= 110 && x < 112 && y >= 20 && y < 22) ? 40 : 255,
+    )
+    removeBackground(c.d, 128, 128, DEFAULT_STRENGTH)
+    expect(c.at(10, 10)).toBe(0)
+    expect(c.at(110, 20)).toBe(0)
+    expect(c.at(64, 64)).toBe(255)
+  })
 })
 
 describe('chaos', () => {
