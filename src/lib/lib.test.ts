@@ -13,7 +13,7 @@ import {
   svgAspect,
 } from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
-import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
+import { DEFAULT_STRENGTH, findFrame, looksPhotographic, removeBackground, suggestCutout } from './cutout'
 import { isHalloweenSeason } from './season'
 import { NOT_FOUND, pageFor } from '../pages/pages'
 import { checkFit, fitPenalty } from '../../supabase/functions/_shared/fit'
@@ -333,6 +333,30 @@ describe('background cutout', () => {
     return { d, at: (x: number, y: number) => d[(y * size + x) * 4 + 3] }
   }
   const inDisc = (x: number, y: number, cx: number, cy: number, r: number) => (x - cx) ** 2 + (y - cy) ** 2 < r * r
+
+  // A shaded "photo" (a dark-suited figure on a navy wall) in flat bars, the way a screenshot comes.
+  const framedPhoto = (bar: number) =>
+    canvas(96, (x, y) => {
+      if (y < 12 || y >= 84) return bar
+      const n = ((x * 7919 + y * 104729) % 23) - 11
+      if (inDisc(x, y, 48, 60, 30)) return [20 + n, 20 + n, 24 + n]
+      return [30 + ((x * 3) % 40) + n, 40 + ((y * 5) % 50) + n, 90 + n]
+    })
+
+  it('finds the photo inside a screenshot’s bars, even where the photo is as dark as them', () => {
+    expect(findFrame(framedPhoto(0).d, 96, 96)).toEqual({ x: 0, y: 12, w: 96, h: 72 })
+    expect(findFrame(framedPhoto(18).d, 96, 96)).toEqual({ x: 0, y: 12, w: 96, h: 72 })
+    // A logo on white has no bars: the white around it doesn't box in a full rectangle.
+    const logo = canvas(96, (x, y) => (inDisc(x, y, 48, 48, 30) ? [200, 40, 40] : 255))
+    expect(findFrame(logo.d, 96, 96)).toBeNull()
+  })
+
+  it('tells a photo from flat artwork', () => {
+    const p = framedPhoto(0)
+    expect(looksPhotographic(p.d, 96, 96, { x: 0, y: 12, w: 96, h: 72 })).toBe(true)
+    const logo = canvas(96, (x, y) => (inDisc(x, y, 48, 48, 30) ? (x < 48 ? [200, 40, 40] : [40, 40, 200]) : 255))
+    expect(looksPhotographic(logo.d, 96, 96)).toBe(false)
+  })
 
   it('removes a baked-in light checkerboard', () => {
     // Web "transparent" PNGs often have the white and light grey squares saved into the pixels.
