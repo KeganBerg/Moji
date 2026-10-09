@@ -1,6 +1,14 @@
 import type { Animation, FrameTransform } from './animations'
 import { checkFit, type FitReport } from '../../supabase/functions/_shared/fit'
-import { DEFAULT_STRENGTH, removeBackground, suggestCutout, type CutoutOptions } from './cutout'
+import {
+  DEFAULT_STRENGTH,
+  findFrame,
+  looksPhotographic,
+  removeBackground,
+  suggestCutout,
+  type Box,
+  type CutoutOptions,
+} from './cutout'
 import { applyMask } from './mask'
 
 export type Fit = 'contain' | 'cover'
@@ -550,32 +558,72 @@ function tinted(source: Canvas2D, width: number, height: number, hue: number, st
 
 const TINT_STRENGTH = 0.5
 
-/** Whether an image looks like a subject on a plain background, checked on a small copy. */
-export function looksCuttable(img: CanvasImageSource & { width: number; height: number }): boolean {
-  const scale = Math.min(1, 96 / Math.max(img.width, img.height))
-  const c = makeCanvas(img.width * scale, img.height * scale)
-  const ctx = ctx2d(c)
-  ctx.drawImage(img, 0, 0, c.width, c.height)
-  const d = ctx.getImageData(0, 0, c.width, c.height).data
-  if (!suggestCutout(d, c.width, c.height)) return false
-  // Try it: a one-color image or a full-bleed tile would be erased entirely.
-  removeBackground(d, c.width, c.height, DEFAULT_STRENGTH)
-  let kept = 0
-  for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
-  const share = kept / (c.width * c.height)
-  return share >= 0.03 && share <= 0.9
-}
+/**
+ * How an upload's background comes off. `cutout`: remove it straight away.
+ * `segment`: find the subject with the photo model rather than by color.
+ * `crop`: a plain band around the photo (a screenshot's bars) to cut off first.
+ */
+export type UploadPlan = { cutout: boolean; segment: boolean; crop?: Box }
 
-/** Whether an image has no see-through pixels of its own (a photo, not a cutout), checked on a small copy. */
-export function isOpaque(img: CanvasImageSource & { width: number; height: number }): boolean {
-  const scale = Math.min(1, 96 / Math.max(img.width, img.height))
-  const c = makeCanvas(img.width * scale, img.height * scale)
-  const ctx = ctx2d(c)
-  ctx.drawImage(img, 0, 0, c.width, c.height)
-  const d = ctx.getImageData(0, 0, c.width, c.height).data
+/** Picks how an upload's background comes off, checked on a small copy. */
+export function uploadPlan(img: CanvasImageSource & { width: number; height: number }): UploadPlan {
+  const small = pixels(img, 96)
+  const { d, w, h } = small
   let clear = 0
   for (let i = 3; i < d.length; i += 4) if (d[i] < 250) clear++
-  return clear <= (d.length / 4) * 0.01
+  // Already see-through: it's a cutout of its own.
+  if (clear > (d.length / 4) * 0.01) return { cutout: false, segment: false }
+  // A busy background can't be cut out by color; Remove asks the model.
+  if (!suggestCutout(d, w, h)) return { cutout: false, segment: true }
+  // A photo inside plain bars: the bars go, then the model finds the subject.
+  // Cutting by color would eat into every dark (or light) part touching them.
+  const frame = findFrame(d, w, h)
+  if (frame && looksPhotographic(d, w, h, frame)) {
+    const big = pixels(img, 1024)
+    const exact = findFrame(big.d, big.w, big.h)
+    if (exact) {
+      const k = img.width / big.w
+      // A pixel in from the edge, past where the photo blends into the band.
+      const x = Math.ceil((exact.x + 1) * k)
+      const y = Math.ceil((exact.y + 1) * k)
+      const crop = {
+        x,
+        y,
+        w: Math.floor((exact.x + exact.w - 1) * k) - x,
+        h: Math.floor((exact.y + exact.h - 1) * k) - y,
+      }
+      if (crop.w > 0 && crop.h > 0) return { cutout: true, segment: true, crop }
+    }
+  }
+  // Try it: a one-color image or a full-bleed tile would be erased entirely.
+  const photo = looksPhotographic(d, w, h)
+  removeBackground(d, w, h, DEFAULT_STRENGTH)
+  let kept = 0
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
+  const share = kept / (w * h)
+  if (share < 0.03 || share > 0.9) return { cutout: false, segment: true }
+  // A photo on a plain backdrop still has shadows and dark or light parts that
+  // match the backdrop, so the model cuts it; flat artwork is cut by color.
+  return { cutout: true, segment: photo }
+}
+
+/** An image's pixels, shrunk so its longest side is at most `size`. */
+function pixels(img: CanvasImageSource & { width: number; height: number }, size: number) {
+  const scale = Math.min(1, size / Math.max(img.width, img.height))
+  const c = makeCanvas(img.width * scale, img.height * scale)
+  const ctx = ctx2d(c)
+  ctx.drawImage(img, 0, 0, c.width, c.height)
+  return { d: ctx.getImageData(0, 0, c.width, c.height).data, w: c.width, h: c.height }
+}
+
+/** Cuts a box out of an image, as a PNG and a decoded copy of it. */
+export async function cropImage(img: HTMLImageElement, box: Box): Promise<{ image: HTMLImageElement; blob: Blob }> {
+  const c = makeCanvas(box.w, box.h)
+  ctx2d(c).drawImage(img, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h)
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    c.toBlob((b) => (b ? resolve(b) : reject(new Error('That image could not be cropped'))), 'image/png'),
+  )
+  return { image: await loadImage(blob), blob }
 }
 
 /** The server's fit check (cut off, background left in, blank), run on a small copy. */

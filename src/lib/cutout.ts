@@ -146,6 +146,81 @@ export function suggestCutout(d: Uint8ClampedArray, width: number, height: numbe
   return matching / border.length >= 0.8
 }
 
+export type Box = { x: number; y: number; w: number; h: number }
+
+/**
+ * A plain band around a photo (a screenshot's black bars, a white mat), as the
+ * box of the photo inside it. Null when there's no band, or when what it
+ * surrounds doesn't fill the box out to its edges (a logo on white).
+ */
+export function findFrame(d: Uint8ClampedArray, width: number, height: number): Box | null {
+  const [bg] = borderPalette(d, width, height)
+  if (!bg) return null
+  // Bars are one flat color, so this is tight: a dark suit next to black bars still counts as photo.
+  const tol = 0.04
+  // Share of a row or column (from a to b) that is the band's color.
+  const plain = (fixed: number, a: number, b: number, row: boolean) => {
+    let n = 0
+    for (let k = a; k < b; k++) if (dist(d, (row ? fixed * width + k : k * width + fixed) * 4, bg) <= tol) n++
+    return n / Math.max(1, b - a)
+  }
+  let top = 0,
+    bottom = 0,
+    left = 0,
+    right = 0
+  while (top < height && plain(top, 0, width, true) >= 0.97) top++
+  while (bottom < height - top && plain(height - 1 - bottom, 0, width, true) >= 0.97) bottom++
+  const y0 = top,
+    y1 = height - bottom
+  while (left < width && plain(left, y0, y1, false) >= 0.97) left++
+  while (right < width - left && plain(width - 1 - right, y0, y1, false) >= 0.97) right++
+  if (top + bottom + left + right === 0) return null
+  const box = { x: left, y: top, w: width - left - right, h: height - top - bottom }
+  if (box.w < width * 0.3 || box.h < height * 0.3) return null
+  // Each banded side of the box is the photo's own edge, not the tip of a shape.
+  const x1 = box.x + box.w
+  // Checked a line in, past the line where a shrunk photo blends into the band.
+  const sides: [number, boolean, number][] = [
+    [top, true, y0 + 1],
+    [bottom, true, y1 - 2],
+    [left, false, box.x + 1],
+    [right, false, x1 - 2],
+  ]
+  for (const [band, row, at] of sides) {
+    if (band && 1 - (row ? plain(at, box.x, x1, true) : plain(at, y0, y1, false)) < 0.5) return null
+  }
+  return box
+}
+
+/**
+ * Whether the pixels in a box that aren't the border's color look like a
+ * photo (fine shading and texture, many colors) rather than flat artwork.
+ * Run on a small copy, about 96 px.
+ */
+export function looksPhotographic(d: Uint8ClampedArray, width: number, height: number, box?: Box): boolean {
+  const { x: bx, y: by, w: bw, h: bh } = box ?? { x: 0, y: 0, w: width, h: height }
+  const bgs = borderPalette(d, width, height)
+  const tol = toleranceFor(DEFAULT_STRENGTH)
+  const colors = new Set<number>()
+  let subject = 0,
+    shaded = 0
+  for (let y = by; y < by + bh - 1; y++)
+    for (let x = bx; x < bx + bw - 1; x++) {
+      const i = (y * width + x) * 4
+      if (d[i + 3] < 128 || (bgs.length && distAny(d, i, bgs) <= tol)) continue
+      subject++
+      colors.add(((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4))
+      // Neighbors a little different (not the same flat fill, not a hard edge).
+      let step = 0
+      for (const j of [i + 4, i + width * 4])
+        for (let c = 0; c < 3; c++) step = Math.max(step, Math.abs(d[i + c] - d[j + c]))
+      if (step > 6 && step < 48) shaded++
+    }
+  if (subject < 200) return false
+  // Leans toward photo: the model copes with artwork, but cutting a photo by color eats into it.
+  return shaded / subject >= 0.3 || colors.size >= 120
+}
+
 /**
  * Makes the background transparent in place. Edge pixels that are only a bit
  * different from the background become partly transparent, so the outline
