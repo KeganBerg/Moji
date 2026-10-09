@@ -59,12 +59,12 @@ import {
   fitOf,
   loadImage,
   cutoutReport,
-  isOpaque,
+  cropImage,
   subjectTone,
-  looksCuttable,
   prepareSource,
   safeInset,
   transparentShare,
+  uploadPlan,
   type Fit,
   type RenderOptions,
 } from './lib/render'
@@ -354,14 +354,17 @@ function Editor() {
       signal?: AbortSignal,
       generated?: HistoryItem['generated'],
     ) => {
-      const image = await loadImage(blob)
+      let image = await loadImage(blob)
       // Start over while the image was loading.
       signal?.throwIfAborted()
-      // Uploads on a plain background (a moon on black, a logo on white) get cut out
-      // automatically. Generated images already come with a transparent background.
-      const cutout = fromUpload && looksCuttable(image)
-      // A photo on a busy background can't be cut out by color; Remove asks the model instead.
-      const segment = fromUpload && !cutout && isOpaque(image)
+      // Uploads on a plain background (a moon on black, a logo on white) get cut
+      // out automatically: artwork by color, photos by the model. Generated images
+      // already come with a transparent background.
+      const plan = fromUpload ? uploadPlan(image) : { cutout: false, segment: false }
+      // A screenshot's bars around a photo are cut off first.
+      if (plan.crop) ({ image, blob } = await cropImage(image, plan.crop))
+      signal?.throwIfAborted()
+      const { cutout, segment } = plan
       const item: HistoryItem = {
         id: nextId.current++,
         image,
