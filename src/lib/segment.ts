@@ -23,12 +23,15 @@ let session: Promise<{ ort: typeof import('onnxruntime-web'); session: Session }
 
 export const MODEL_PARTS = ['silueta.onnx.part0', 'silueta.onnx.part1', 'silueta.onnx.part2']
 export const MODEL_SHA256 = '75da6c8d2f8096ec743d071951be73b4a8bc7b3e51d9a6625d63644f90ffeedb'
-/** Git tag in this repo whose public/models/silueta holds MODEL_PARTS. */
-const MODEL_TAG = 'models-v1'
+/**
+ * The commit in this repo that added public/models/silueta. A commit, not a
+ * branch, so the files behind the link can never change.
+ */
+const MODEL_COMMIT = 'e032bb2d5fa657227eac48349e7c984432dd273c'
 /** Folders holding MODEL_PARTS, tried in order. */
 const MODEL_SOURCES = [
-  `https://cdn.jsdelivr.net/gh/KeganBerg/Moji@${MODEL_TAG}/public/models/silueta/`,
-  `https://raw.githubusercontent.com/KeganBerg/Moji/${MODEL_TAG}/public/models/silueta/`,
+  `https://cdn.jsdelivr.net/gh/KeganBerg/Moji@${MODEL_COMMIT}/public/models/silueta/`,
+  `https://raw.githubusercontent.com/KeganBerg/Moji/${MODEL_COMMIT}/public/models/silueta/`,
   '/models/silueta/',
 ]
 /** Must match onnxruntime-web in package.json (a test checks both). */
