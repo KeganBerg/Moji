@@ -30,6 +30,7 @@ export function applyMask(d: Uint8ClampedArray, width: number, height: number, m
         (cleaned[y1 * SIZE + x0] * (1 - fx) + cleaned[y1 * SIZE + x1] * fx) * fy
     }
   }
+  colorVote(d, soft)
   // The map is 320 cells wide whatever the photo, so its edge is blocky and
   // drifts off the real outline. A guided filter snaps it to the photo's own edges.
   const luma = new Float32Array(n)
@@ -42,7 +43,48 @@ export function applyMask(d: Uint8ClampedArray, width: number, height: number, m
     const t = Math.min(1, Math.max(0, (m - lo) / (hi - lo)))
     d[p * 4 + 3] = Math.round(d[p * 4 + 3] * t * t * (3 - 2 * t))
   }
+  dropSpecks(d, width, height)
   defringe(d, width, height)
+}
+
+/**
+ * Where the model is unsure, asks the colors: a bit of a busy background the
+ * model half-took for the subject (swirl around a head) has the background's
+ * colors, so it is pulled toward background; a soft hair edge has the
+ * subject's colors and stays.
+ */
+function colorVote(d: Uint8ClampedArray, soft: Float32Array) {
+  const BINS = 16
+  const fg = new Float32Array(BINS ** 3)
+  const bg = new Float32Array(BINS ** 3)
+  const bin = (p: number) => ((d[p * 4] >> 4) * BINS + (d[p * 4 + 1] >> 4)) * BINS + (d[p * 4 + 2] >> 4)
+  let nf = 0,
+    nb = 0
+  for (let p = 0; p < soft.length; p++) {
+    if (soft[p] > 0.97) {
+      fg[bin(p)]++
+      nf++
+    } else if (soft[p] < 0.1) {
+      bg[bin(p)]++
+      nb++
+    }
+  }
+  // When much of the photo is unsure (a close-up with a blurred background
+  // in the same colors), the subject's colors aren't known well enough.
+  if (nf < 50 || nb < 50 || soft.length - nf - nb > soft.length * 0.15) return
+  for (let p = 0; p < soft.length; p++) {
+    const m = soft[p]
+    if (m <= 0.1) continue
+    const b = bin(p)
+    const f = (fg[b] + 0.5) / nf
+    const g = (bg[b] + 0.5) / nb
+    const vote = f / (f + g)
+    // Only clear-cut colors count: a close-up cat on a blurred cat-colored
+    // background shares its colors, and there the model knows better.
+    // Where the model is sure, only a color it almost never saw on the subject
+    // overrules it (a red swirl it merged with white hair).
+    if (m >= 0.9 ? vote < 0.03 : vote < 0.15 || vote > 0.85) soft[p] = m * 0.25 + vote * 0.75
+  }
 }
 
 /** Edge-preserving smoothing of `src` that follows the edges of `guide` (He et al., 2010). */
@@ -94,6 +136,41 @@ function boxBlur(src: Float32Array, w: number, h: number, r: number) {
   return out
 }
 
+/** Clears specks left floating apart from the subject (bits of the old background). */
+function dropSpecks(d: Uint8ClampedArray, w: number, h: number) {
+  const n = w * h
+  const label = new Int32Array(n).fill(-1)
+  const sizes: number[] = []
+  for (let s = 0; s < n; s++) {
+    if (label[s] !== -1 || d[s * 4 + 3] < 32) continue
+    const id = sizes.length
+    let size = 0
+    const stack = [s]
+    label[s] = id
+    while (stack.length) {
+      const p = stack.pop()!
+      size++
+      const x = p % w,
+        y = (p - x) / w
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx,
+            yy = y + dy
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue
+          const q = yy * w + xx
+          if (label[q] === -1 && d[q * 4 + 3] >= 32) {
+            label[q] = id
+            stack.push(q)
+          }
+        }
+    }
+    sizes.push(size)
+  }
+  if (sizes.length < 2) return
+  const min = Math.max(...sizes) * 0.005
+  for (let p = 0; p < n; p++) if (label[p] !== -1 && sizes[label[p]] < min) d[p * 4 + 3] = 0
+}
+
 /**
  * Half-transparent edge pixels still carry the old background's color (a red
  * rim from a red wall). Pulls their color in from the solid pixels next to them.
@@ -132,33 +209,60 @@ function defringe(d: Uint8ClampedArray, w: number, h: number) {
 
 /** Map cells this far (of 320) from the sure core keep their soft edge. */
 const SOFT_REACH = 6
+/** Necks thinner than about twice this (in map cells) can't carry a blob into the subject. */
+const NECK = 3
 
 /**
  * Clears what the model half-saw in a busy background: sure regions under a
- * tenth the weight of the largest (two people both stay), and faint ghosts
+ * tenth the weight of the largest (two people both stay), blobs hanging off
+ * the subject by a thin neck (a swirl over someone's head), and faint ghosts
  * that trail away from the subject instead of hugging its edge.
  */
 function dropStrays(mask: Float32Array, lo: number): Float32Array {
-  const sure = 0.5
   const n = mask.length
-  const label = new Int32Array(n).fill(-1)
-  const weights: number[] = []
-  const stack: number[] = []
+  const sure = new Uint8Array(n)
+  for (let p = 0; p < n; p++) sure[p] = mask[p] >= 0.5 ? 1 : 0
   const near = (p: number) => {
     const x = p % SIZE
     return [x > 0 ? p - 1 : -1, x < SIZE - 1 ? p + 1 : -1, p - SIZE, p + SIZE].filter((q) => q >= 0 && q < n)
   }
+  /** Steps from each cell in `from` (up to `max`), moving only through cells `through` allows. */
+  const spread = (from: number[], max: number, through: (q: number) => boolean) => {
+    const dist = new Uint8Array(n).fill(255)
+    for (const p of from) dist[p] = 0
+    let ring = from
+    for (let r = 1; r <= max && ring.length; r++) {
+      const next: number[] = []
+      for (const p of ring)
+        for (const q of near(p))
+          if (dist[q] === 255 && through(q)) {
+            dist[q] = r
+            next.push(q)
+          }
+      ring = next
+    }
+    return dist
+  }
+  // Opening: shrink the sure area by NECK and grow it back, which cuts thin necks.
+  const outside: number[] = []
+  for (let p = 0; p < n; p++) if (!sure[p] || near(p).length < 4) outside.push(p)
+  const depth = spread(outside, NECK, (q) => sure[q] === 1)
+  const inner: number[] = []
+  for (let p = 0; p < n; p++) if (depth[p] === 255) inner.push(p)
+  const grown = spread(inner, NECK, (q) => sure[q] === 1)
+  const label = new Int32Array(n).fill(-1)
+  const weights: number[] = []
   for (let s = 0; s < n; s++) {
-    if (label[s] !== -1 || mask[s] < sure) continue
+    if (label[s] !== -1 || grown[s] === 255) continue
     const id = weights.length
     let w = 0
+    const stack = [s]
     label[s] = id
-    stack.push(s)
     while (stack.length) {
       const p = stack.pop()!
       w += mask[p]
       for (const q of near(p))
-        if (label[q] === -1 && mask[q] >= sure) {
+        if (label[q] === -1 && grown[q] !== 255) {
           label[q] = id
           stack.push(q)
         }
@@ -167,25 +271,17 @@ function dropStrays(mask: Float32Array, lo: number): Float32Array {
   }
   if (!weights.length) return mask
   const keep = Math.max(...weights) * 0.1
-  // Breadth-first distance from the kept core, out to SOFT_REACH.
-  const dist = new Uint8Array(n).fill(255)
-  let ring: number[] = []
-  for (let p = 0; p < n; p++)
-    if (label[p] !== -1 && weights[label[p]] >= keep) {
-      dist[p] = 0
-      ring.push(p)
-    }
-  for (let r = 1; r <= SOFT_REACH && ring.length; r++) {
-    const next: number[] = []
-    for (const p of ring)
-      for (const q of near(p))
-        if (dist[q] === 255 && mask[q] > lo) {
-          dist[q] = r
-          next.push(q)
-        }
-    ring = next
-  }
+  const kept = (p: number) => label[p] !== -1 && weights[label[p]] >= keep
+  const dropped = (p: number) => label[p] !== -1 && !kept(p)
+  // The subject is the kept cores plus thin sure parts (arms, legs) reached
+  // from them without passing through a dropped blob.
+  const cores: number[] = []
+  for (let p = 0; p < n; p++) if (kept(p)) cores.push(p)
+  const subject = spread(cores, 254, (q) => sure[q] === 1 && !dropped(q))
+  const body: number[] = []
+  for (let p = 0; p < n; p++) if (subject[p] !== 255) body.push(p)
+  const reach = spread(body, SOFT_REACH, (q) => mask[q] > lo && !dropped(q))
   const out = mask.slice()
-  for (let p = 0; p < n; p++) if (dist[p] === 255) out[p] = 0
+  for (let p = 0; p < n; p++) if (reach[p] === 255) out[p] = 0
   return out
 }
