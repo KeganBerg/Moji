@@ -15,6 +15,19 @@
  *   the crumbs they shed, and lone specks in the removed area go too.
  */
 
+export interface CutoutOptions {
+  /**
+   * Background-colored spots the fill can't reach from the edge, like the
+   * inside of an O. 'auto' clears them only when they all look like gaps in
+   * lettering or thin outlines (eye highlights and white fills stay).
+   */
+  holes?: 'auto' | 'keep' | 'clear'
+  /** Pixel art: no soft or unblended edges, every pixel stays or goes whole. */
+  crisp?: boolean
+  /** Filled in with what was found, for the editor. */
+  report?: { holes: number; holesCleared: boolean }
+}
+
 /** Default cutout strength, 0 to 100. */
 export const DEFAULT_STRENGTH = 30
 
@@ -138,7 +151,13 @@ export function suggestCutout(d: Uint8ClampedArray, width: number, height: numbe
  * different from the background become partly transparent, so the outline
  * stays smooth instead of jagged. Returns how many pixels were removed.
  */
-export function removeBackground(d: Uint8ClampedArray, width: number, height: number, strength: number): number {
+export function removeBackground(
+  d: Uint8ClampedArray,
+  width: number,
+  height: number,
+  strength: number,
+  opts: CutoutOptions = {},
+): number {
   const bgs = borderPalette(d, width, height)
   if (!bgs.length) return 0
   const tol = toleranceFor(strength)
@@ -170,7 +189,26 @@ export function removeBackground(d: Uint8ClampedArray, width: number, height: nu
     return tail
   }
 
+  if (!opts.crisp) dropShadows(d, isBg, width, height, bgs[0])
   dropDebris(d, isBg, width, height)
+  const holes = findHoles(d, isBg, width, height, bgs, tol)
+  const clearHoles = opts.holes === 'clear' || (opts.holes !== 'keep' && holes.autoClear)
+  if (opts.report) {
+    opts.report.holes = holes.count
+    opts.report.holesCleared = clearHoles && holes.count > 0
+  }
+  if (clearHoles) for (const p of holes.pixels) isBg[p] = 1
+
+  // Pixel art keeps hard edges: a pixel is either the subject or gone.
+  if (opts.crisp) {
+    let removed = 0
+    for (let p = 0; p < n; p++)
+      if (isBg[p]) {
+        d[p * 4 + 3] = 0
+        removed++
+      }
+    return removed
+  }
 
   // Soften the ring of subject pixels that touch the removed background.
   for (let p = 0; p < n; p++) {
@@ -504,7 +542,9 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
   for (let p = 0; p < n; p++) if (kept[p]) groupSize[groups.labels[p]]++
   let largest = 0
   for (const s of groupSize) largest = Math.max(largest, s)
-  const minGroup = Math.max(4, largest * 0.004)
+  // Only real crumbs: a sparkle or a dot drawn on purpose beside the subject
+  // is far bigger than a few stray pixels of noise.
+  const minGroup = Math.max(12, largest * 0.0008)
   for (let p = 0; p < n; p++) if (kept[p] && groupSize[groups.labels[p]] < minGroup) clear(p)
   // The rest only follows a real smear, not a stray false alarm.
   let smearSize = 0
@@ -611,4 +651,161 @@ function dropDebris(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number
     const speck = !attached[bit] && touch[bit] && bits.sizes[bit] < total * 0.0015
     if (lone || speck) clear(p)
   }
+}
+
+/**
+ * A soft drop shadow on a light background (a product shot, a logo with a
+ * shadow under it) isn't the background's color, so the fill stops at it and
+ * it would stay as a grey blob. Shadow pixels are the background darkened
+ * evenly in every channel, and they change gently from pixel to pixel, so
+ * the fill carries on through them. A subject's own edge, even a grey one,
+ * changes sharply, so the fill stops there.
+ */
+function dropShadows(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number, bg: Rgb) {
+  if (Math.min(bg[0], bg[1], bg[2]) < 150) return
+  const n = w * h
+  const lum = (i: number) => d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11
+  const shadowy = (p: number) => {
+    const i = p * 4
+    if (d[i + 3] < 8) return false
+    const r = d[i] / bg[0],
+      g = d[i + 1] / bg[1],
+      b = d[i + 2] / bg[2]
+    const k = (r + g + b) / 3
+    return k >= 0.45 && k <= 1.02 && Math.max(r, g, b) - Math.min(r, g, b) < 0.07
+  }
+  const queue: number[] = []
+  const shadow = new Uint8Array(n)
+  const step = (from: number, p: number) => {
+    if (isBg[p] || shadow[p] || !shadowy(p)) return
+    if (Math.abs(lum(p * 4) - lum(from * 4)) > 10) return
+    shadow[p] = 1
+    queue.push(p)
+  }
+  const grow = (p: number) => {
+    const x = p % w
+    if (x > 0) step(p, p - 1)
+    if (x < w - 1) step(p, p + 1)
+    if (p >= w) step(p, p - w)
+    if (p < n - w) step(p, p + w)
+  }
+  for (let p = 0; p < n; p++) if (isBg[p]) grow(p)
+  for (let k = 0; k < queue.length; k++) grow(queue[k])
+  // Only a real shadow, not a faint rim of a light subject: a few hundredths of the image at least.
+  if (queue.length < n * 0.01) return
+  for (const p of queue) isBg[p] = 1
+}
+
+/**
+ * Background-colored spots the fill can't reach because something encloses
+ * them: the inside of an O or a D, the space inside a line-art house, or a
+ * white highlight in an eye. In lettering and outlines they are see-through
+ * gaps; in a drawing they are usually paint. A spot reads as a gap when it is
+ * small next to the subject, has nothing drawn inside it, and the stroke
+ * around it is thin (it lies close to the outside of the subject).
+ */
+function findHoles(d: Uint8ClampedArray, isBg: Uint8Array, w: number, h: number, bgs: Rgb[], tol: number) {
+  const n = w * h
+  const cand = new Uint8Array(n)
+  let subject = 0
+  let minX = w,
+    minY = h,
+    maxX = -1,
+    maxY = -1
+  for (let p = 0; p < n; p++) {
+    if (isBg[p]) continue
+    subject++
+    const x = p % w,
+      y = (p - x) / w
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+    if (d[p * 4 + 3] >= 8 && distAny(d, p * 4, bgs) <= tol) cand[p] = 1
+  }
+  const none = { count: 0, autoClear: false, pixels: [] as number[] }
+  if (!subject) return none
+  const { labels, sizes } = label(cand, w, h)
+  const minSize = Math.max(6, subject * 0.0005)
+  // How far each subject pixel is from the removed background (3 per pixel).
+  const inside = new Uint8Array(n)
+  for (let p = 0; p < n; p++) inside[p] = isBg[p] ? 0 : 1
+  const dist = distanceInside(inside, w, h)
+  const span = Math.max(maxX - minX + 1, maxY - minY + 1)
+  // Per spot: bounding box, and its edge pixels' distances from the outside.
+  const count = sizes.length
+  const bx0 = new Int32Array(count).fill(w),
+    by0 = new Int32Array(count).fill(h),
+    bx1 = new Int32Array(count).fill(-1),
+    by1 = new Int32Array(count).fill(-1)
+  const edgeDist: number[][] = Array.from({ length: count }, () => [])
+  for (let p = 0; p < n; p++) {
+    const id = labels[p]
+    if (!id) continue
+    const x = p % w,
+      y = (p - x) / w
+    if (x < bx0[id]) bx0[id] = x
+    if (x > bx1[id]) bx1[id] = x
+    if (y < by0[id]) by0[id] = y
+    if (y > by1[id]) by1[id] = y
+    const edge =
+      (x > 0 && labels[p - 1] !== id) ||
+      (x < w - 1 && labels[p + 1] !== id) ||
+      (p >= w && labels[p - w] !== id) ||
+      (p < n - w && labels[p + w] !== id)
+    if (edge) edgeDist[id].push(dist[p])
+  }
+  const pixels: number[] = []
+  let holes = 0,
+    gaps = 0
+  for (let id = 1; id < count; id++) {
+    if (sizes[id] < minSize) continue
+    holes++
+    const ds = edgeDist[id].sort((a, b) => a - b)
+    const median = ds[ds.length >> 1] ?? 0
+    // Thin next to the whole subject or next to the spot itself (a bold O's ring is about as wide as its inside).
+    const thin = Math.max(4, 0.07 * span, Math.sqrt(sizes[id])) * 3
+    if (sizes[id] <= subject * 0.25 && median <= thin && !hasIsland(labels, id, w, bx0[id], by0[id], bx1[id], by1[id]))
+      gaps++
+  }
+  if (!holes) return none
+  for (let p = 0; p < n; p++) if (labels[p] && sizes[labels[p]] >= minSize) pixels.push(p)
+  return { count: holes, autoClear: gaps === holes, pixels }
+}
+
+/** Whether spot `id` surrounds anything (a pupil inside an eye's white), checked within its bounding box. */
+function hasIsland(labels: Int32Array, id: number, w: number, x0: number, y0: number, x1: number, y1: number) {
+  const bw = x1 - x0 + 1,
+    bh = y1 - y0 + 1
+  const seen = new Uint8Array(bw * bh)
+  const stack: number[] = []
+  const push = (x: number, y: number) => {
+    const k = (y - y0) * bw + (x - x0)
+    if (seen[k] || labels[y * w + x] === id) return
+    seen[k] = 1
+    stack.push(k)
+  }
+  for (let x = x0; x <= x1; x++) {
+    push(x, y0)
+    push(x, y1)
+  }
+  for (let y = y0; y <= y1; y++) {
+    push(x0, y)
+    push(x1, y)
+  }
+  while (stack.length) {
+    const k = stack.pop()!
+    const x = (k % bw) + x0,
+      y = Math.floor(k / bw) + y0
+    if (x > x0) push(x - 1, y)
+    if (x < x1) push(x + 1, y)
+    if (y > y0) push(x, y - 1)
+    if (y < y1) push(x, y + 1)
+  }
+  for (let k = 0; k < seen.length; k++) {
+    const x = (k % bw) + x0,
+      y = Math.floor(k / bw) + y0
+    if (!seen[k] && labels[y * w + x] !== id) return true
+  }
+  return false
 }

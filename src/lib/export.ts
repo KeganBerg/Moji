@@ -116,26 +116,38 @@ function* gifSteps(
   // Big exports (GIPHY, Instagram) build it from every Nth pixel of every
   // frame, up to about a million pixels, so it doesn't block for long or use
   // lots of memory, and every frame's colors (Party's hues) still count.
+  // Only visible pixels pick colors, at 5-6-5 bits: a shared 4-bit
+  // color-and-alpha palette left smooth shading in visible bands.
   const pixels = size * size
   const stride = Math.max(1, Math.ceil((frames.length * pixels) / QUANTIZE_PIXELS))
-  const perFrame = Math.ceil(pixels / stride)
-  const all = new Uint32Array(frames.length * perFrame)
-  frames.forEach((f, i) => {
+  const all = new Uint32Array(frames.length * Math.ceil(pixels / stride))
+  let count = 0,
+    clear = false
+  frames.forEach((f) => {
     const px = new Uint32Array(f.buffer, f.byteOffset, pixels)
-    for (let j = 0, k = i * perFrame; j < pixels; j += stride, k++) all[k] = px[j]
+    for (let j = 0; j < pixels; j += stride)
+      if (f[j * 4 + 3] >= 128) all[count++] = px[j]
+      else clear = true
   })
+  if (!clear) for (const f of frames) for (let j = 3; j < f.length; j += 4) if (f[j] < 128) clear = true
   yield
-  const palette = quantize(new Uint8Array(all.buffer), colors, { format: 'rgba4444', oneBitAlpha: true })
-  const transparentIndex = palette.findIndex((c) => c[3] === 0)
+  // An all-clear loop still needs one color to point at.
+  const palette = count
+    ? quantize(new Uint8Array(all.buffer, 0, count * 4), clear ? colors - 1 : colors, { format: 'rgb565' })
+    : [[0, 0, 0]]
+  const transparentIndex = clear ? palette.length : -1
+  const fullPalette = clear ? [...palette, [0, 0, 0]] : palette
   const gif = GIFEncoder()
   for (let i = 0; i < frames.length; i++) {
     if (i % 2 === 0) yield
-    const index = applyPalette(frames[i], palette, 'rgba4444')
+    const f = frames[i]
+    const index = applyPalette(f, palette, 'rgb565')
+    if (clear) for (let j = 0; j < index.length; j++) if (f[j * 4 + 3] < 128) index[j] = transparentIndex
     gif.writeFrame(index, size, size, {
-      palette: i === 0 ? palette : undefined,
+      palette: i === 0 ? fullPalette : undefined,
       delay,
       repeat: 0,
-      transparent: transparentIndex >= 0,
+      transparent: clear,
       transparentIndex: Math.max(0, transparentIndex),
       // Clear to background between frames, or transparent GIFs smear.
       dispose: 2,

@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { ANIMATIONS, SPEED, composeAnimations, getAnimation, withIntensity, withSpeed } from './animations'
 import { encodeGif, frameTiming, gifLadder, keepsMotion } from './export'
 import { PLATFORMS, formatBytes, sanitizeName } from './platforms'
-import { DEFAULT_RENDER, SPARKLES, insetFor, opaqueBounds, rotatedSize } from './render'
+import {
+  DEFAULT_RENDER,
+  SPARKLES,
+  convexHull,
+  insetFor,
+  isPixelArt,
+  opaqueBounds,
+  rotatedSize,
+  svgAspect,
+} from './render'
 import { DEFAULT_TUNE, tunePixels } from './tune'
 import { DEFAULT_STRENGTH, removeBackground, suggestCutout } from './cutout'
 import { isHalloweenSeason } from './season'
@@ -378,6 +387,49 @@ describe('background cutout', () => {
     expect(c.at(63, 120)).toBe(255)
   })
 
+  it('clears the inside of letters but keeps a white highlight in an eye', () => {
+    // "O"s: dark rings on white, their insides as white as the background.
+    const ring = (x: number, y: number, cx: number) => inDisc(x, y, cx, 64, 20) && !inDisc(x, y, cx, 64, 10)
+    const text = canvas(128, (x, y) => (ring(x, y, 34) || ring(x, y, 94) ? 25 : 255))
+    const report = { holes: 0, holesCleared: false }
+    removeBackground(text.d, 128, 128, DEFAULT_STRENGTH, { report })
+    expect(report).toEqual({ holes: 2, holesCleared: true })
+    expect(text.at(34, 64)).toBe(0)
+    expect(text.at(34, 48)).toBe(255)
+    // A big face with a dark pupil and a white highlight deep inside it.
+    const face = canvas(128, (x, y) =>
+      inDisc(x, y, 64, 64, 6) ? 255 : inDisc(x, y, 64, 64, 14) ? 20 : inDisc(x, y, 64, 64, 56) ? [250, 200, 40] : 255,
+    )
+    removeBackground(face.d, 128, 128, DEFAULT_STRENGTH)
+    expect(face.at(64, 64)).toBe(255)
+    // ...unless asked.
+    const cleared = canvas(128, (x, y) =>
+      inDisc(x, y, 64, 64, 6) ? 255 : inDisc(x, y, 64, 64, 14) ? 20 : inDisc(x, y, 64, 64, 56) ? [250, 200, 40] : 255,
+    )
+    removeBackground(cleared.d, 128, 128, DEFAULT_STRENGTH, { holes: 'clear' })
+    expect(cleared.at(64, 64)).toBe(0)
+  })
+
+  it('keeps a small dot drawn on purpose beside the subject', () => {
+    const c = canvas(256, (x, y) =>
+      inDisc(x, y, 120, 130, 90) ? [200, 50, 40] : inDisc(x, y, 236, 18, 7) ? [255, 190, 0] : 255,
+    )
+    removeBackground(c.d, 256, 256, DEFAULT_STRENGTH)
+    expect(c.at(236, 18)).toBe(255)
+  })
+
+  it('drops a soft drop shadow on a light background', () => {
+    const c = canvas(128, (x, y) => {
+      if (inDisc(x, y, 64, 54, 30)) return [40, 90, 200]
+      // A blurred oval shadow under it.
+      const r = Math.hypot((x - 64) / 36, (y - 104) / 9)
+      return r < 1.6 ? Math.round(255 - 90 * Math.max(0, 1 - r / 1.6) ** 1.5) : 255
+    })
+    removeBackground(c.d, 128, 128, DEFAULT_STRENGTH)
+    expect(c.at(64, 104)).toBe(0)
+    expect(c.at(64, 54)).toBe(255)
+  })
+
   it('drops lone specks floating in the background', () => {
     const c = canvas(128, (x, y) =>
       inDisc(x, y, 64, 64, 36) || (x === 10 && y === 10) || (x >= 110 && x < 112 && y >= 20 && y < 22) ? 40 : 255,
@@ -510,5 +562,45 @@ describe('checkFit', () => {
     const tile = checkFit(new Uint8ClampedArray(100 * 100 * 4).fill(255), 100, 100)
     expect(fitPenalty(ok)).toBeLessThan(fitPenalty(cut))
     expect(fitPenalty(cut)).toBeLessThan(fitPenalty(tile))
+  })
+})
+
+describe('sources', () => {
+  it("reads an SVG's shape from its size or viewBox", () => {
+    expect(svgAspect('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">')).toBe(2.5)
+    expect(svgAspect('<svg width="24" height="48" viewBox="0 0 10 10">')).toBe(0.5)
+    expect(svgAspect('<svg width="100%" height="100%" viewBox="0,0,30,10">')).toBe(3)
+    expect(svgAspect('<svg>')).toBeNull()
+  })
+
+  it('spots pixel art but not small anti-aliased icons', () => {
+    const art = new Uint8ClampedArray(16 * 16 * 4)
+    for (let i = 0; i < 16 * 16; i++)
+      art.set(i % 3 ? [220, 30, 60, 255] : i % 2 ? [255, 160, 170, 255] : [0, 0, 0, 0], i * 4)
+    expect(isPixelArt(art, 16, 16)).toBe(true)
+    const soft = art.slice()
+    soft[7] = 120
+    expect(isPixelArt(soft, 16, 16)).toBe(false)
+    expect(isPixelArt(art, 200, 2)).toBe(false)
+  })
+
+  it('wraps every point in a convex hull', () => {
+    const hull = convexHull([
+      [0, 0],
+      [4, 0],
+      [4, 4],
+      [0, 4],
+      [2, 2],
+      [1, 3],
+    ])
+    expect(hull).toHaveLength(4)
+    expect(hull).toEqual(
+      expect.arrayContaining([
+        [0, 0],
+        [4, 0],
+        [4, 4],
+        [0, 4],
+      ]),
+    )
   })
 })
