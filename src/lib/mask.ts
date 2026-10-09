@@ -7,9 +7,13 @@ const SIZE = MASK_SIZE
  * sets how sure the model must be: higher trims more of the soft edge.
  */
 export function applyMask(d: Uint8ClampedArray, width: number, height: number, mask: Float32Array, strength: number) {
-  const lo = 0.02 + (strength / 100) * 0.33
-  const hi = lo + 0.3
-  mask = dropStrays(mask, lo)
+  // The full model is near 1 on its subject; the grey it leaves around it
+  // (a halo, a busy patch it half-noticed) is background.
+  const lo = 0.25 + (strength / 100) * 0.4
+  const hi = lo + 0.25
+  const cleaned = dropStrays(mask, lo)
+  const n = width * height
+  const soft = new Float32Array(n)
   for (let y = 0; y < height; y++) {
     // Bilinear sample of the mask at this pixel's center.
     const my = Math.min(SIZE - 1, Math.max(0, ((y + 0.5) / height) * SIZE - 0.5))
@@ -21,13 +25,108 @@ export function applyMask(d: Uint8ClampedArray, width: number, height: number, m
       const x0 = Math.floor(mx),
         x1 = Math.min(SIZE - 1, x0 + 1),
         fx = mx - x0
-      const m =
-        (mask[y0 * SIZE + x0] * (1 - fx) + mask[y0 * SIZE + x1] * fx) * (1 - fy) +
-        (mask[y1 * SIZE + x0] * (1 - fx) + mask[y1 * SIZE + x1] * fx) * fy
-      const t = Math.min(1, Math.max(0, (m - lo) / (hi - lo)))
-      const i = (y * width + x) * 4 + 3
-      d[i] = Math.round(d[i] * t * t * (3 - 2 * t))
+      soft[y * width + x] =
+        (cleaned[y0 * SIZE + x0] * (1 - fx) + cleaned[y0 * SIZE + x1] * fx) * (1 - fy) +
+        (cleaned[y1 * SIZE + x0] * (1 - fx) + cleaned[y1 * SIZE + x1] * fx) * fy
     }
+  }
+  // The map is 320 cells wide whatever the photo, so its edge is blocky and
+  // drifts off the real outline. A guided filter snaps it to the photo's own edges.
+  const luma = new Float32Array(n)
+  for (let p = 0; p < n; p++) luma[p] = (d[p * 4] * 0.299 + d[p * 4 + 1] * 0.587 + d[p * 4 + 2] * 0.114) / 255
+  const r = Math.max(2, Math.round(Math.max(width, height) / 160))
+  const fitted = guidedFilter(luma, soft, width, height, r, 1e-3)
+  for (let p = 0; p < n; p++) {
+    // Far from the model's edge, trust the model over the filter.
+    const m = soft[p] < 0.05 || soft[p] > 0.95 ? soft[p] : fitted[p]
+    const t = Math.min(1, Math.max(0, (m - lo) / (hi - lo)))
+    d[p * 4 + 3] = Math.round(d[p * 4 + 3] * t * t * (3 - 2 * t))
+  }
+  defringe(d, width, height)
+}
+
+/** Edge-preserving smoothing of `src` that follows the edges of `guide` (He et al., 2010). */
+function guidedFilter(guide: Float32Array, src: Float32Array, w: number, h: number, r: number, eps: number) {
+  const n = w * h
+  const ip = new Float32Array(n)
+  const ii = new Float32Array(n)
+  for (let p = 0; p < n; p++) {
+    ip[p] = guide[p] * src[p]
+    ii[p] = guide[p] * guide[p]
+  }
+  const mI = boxBlur(guide, w, h, r)
+  const mP = boxBlur(src, w, h, r)
+  const mIP = boxBlur(ip, w, h, r)
+  const mII = boxBlur(ii, w, h, r)
+  const a = new Float32Array(n)
+  const b = new Float32Array(n)
+  for (let p = 0; p < n; p++) {
+    a[p] = (mIP[p] - mI[p] * mP[p]) / (mII[p] - mI[p] * mI[p] + eps)
+    b[p] = mP[p] - a[p] * mI[p]
+  }
+  const mA = boxBlur(a, w, h, r)
+  const mB = boxBlur(b, w, h, r)
+  const out = new Float32Array(n)
+  for (let p = 0; p < n; p++) out[p] = mA[p] * guide[p] + mB[p]
+  return out
+}
+
+/** Mean over a (2r+1)² window, clamped at the borders. */
+function boxBlur(src: Float32Array, w: number, h: number, r: number) {
+  const tmp = new Float32Array(w * h)
+  const out = new Float32Array(w * h)
+  for (let y = 0; y < h; y++) {
+    let sum = 0
+    for (let x = -r; x <= r; x++) sum += src[y * w + Math.min(w - 1, Math.max(0, x))]
+    for (let x = 0; x < w; x++) {
+      tmp[y * w + x] = sum / (2 * r + 1)
+      sum += src[y * w + Math.min(w - 1, x + r + 1)] - src[y * w + Math.max(0, x - r)]
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let sum = 0
+    for (let y = -r; y <= r; y++) sum += tmp[Math.min(h - 1, Math.max(0, y)) * w + x]
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = sum / (2 * r + 1)
+      sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]
+    }
+  }
+  return out
+}
+
+/**
+ * Half-transparent edge pixels still carry the old background's color (a red
+ * rim from a red wall). Pulls their color in from the solid pixels next to them.
+ */
+function defringe(d: Uint8ClampedArray, w: number, h: number) {
+  for (let pass = 0; pass < 3; pass++) {
+    const src = d.slice()
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        if (src[i + 3] === 0 || src[i + 3] >= 250) continue
+        let r = 0,
+          g = 0,
+          b = 0,
+          sum = 0
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            const xx = x + dx,
+              yy = y + dy
+            if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue
+            const j = (yy * w + xx) * 4
+            const k = (src[j + 3] / 255) ** 4
+            r += src[j] * k
+            g += src[j + 1] * k
+            b += src[j + 2] * k
+            sum += k
+          }
+        if (sum > 0) {
+          d[i] = r / sum
+          d[i + 1] = g / sum
+          d[i + 2] = b / sum
+        }
+      }
   }
 }
 
