@@ -256,6 +256,8 @@ function Editor() {
       })
       .catch(() => {
         if (cancelled) return
+        // Don't download the photo with its background in after all.
+        if (downloadWanted.current === id) downloadWanted.current = null
         setError({ key: 'errRemoveBg' })
         setHistory((h) => h.map((item) => (item.id === id ? { ...item, cutout: false } : item)))
       })
@@ -340,7 +342,9 @@ function Editor() {
       return next > 180 ? next - 360 : next <= -180 ? next + 360 : next
     })
   const exportKey = useMemo(() => ({ source, options, animation, platform }), [source, options, animation, platform])
-  const result = exported?.key === exportKey ? exported.result : null
+  // While a photo's background is still being removed, the export is of the photo
+  // with its background in, so it isn't ready: Download waits for the cutout.
+  const result = exported?.key === exportKey && !needsMask ? exported.result : null
   const exporting = !!source && exported?.key !== exportKey
   const emojiName = sanitizeName(name || active?.name || 'moji', platformId)
   const extension = animation.frames > 1 ? 'gif' : 'png'
@@ -517,10 +521,12 @@ function Editor() {
 
   // A click while the file is still being sized downloads it once it's ready
   // (for the same image; picking another one cancels it).
-  const downloadWanted = useRef<HTMLCanvasElement | null>(null)
+  // A click while a photo's background is being removed waits for that image
+  // (by id, since the cutout gives it a new source).
+  const downloadWanted = useRef<HTMLCanvasElement | number | null>(null)
   const download = () => {
     if (!result) {
-      downloadWanted.current = source
+      downloadWanted.current = needsMask && active ? active.id : source
       return
     }
     downloadBlob(result.blob, fileName)
@@ -531,11 +537,11 @@ function Editor() {
     downloadRef.current = download
   })
   useEffect(() => {
-    if (!result || !downloadWanted.current) return
-    const wanted = downloadWanted.current === source
+    if (!result || downloadWanted.current === null) return
+    const wanted = downloadWanted.current === source || downloadWanted.current === activeId
     downloadWanted.current = null
     if (wanted) downloadRef.current()
-  }, [result, source])
+  }, [result, source, activeId])
 
   // Instagram: copy the PNG so it can be pasted into a Story as a sticker.
   const canCopy = typeof window !== 'undefined' && 'ClipboardItem' in window && !!navigator.clipboard?.write
@@ -594,7 +600,7 @@ function Editor() {
   return (
     <div className="shell">
       <SiteHeader>
-        <a className="slack-link" href="/slack" title={t('slackAppTitle')}>
+        <a className="slack-link" href="/slack/" title={t('slackAppTitle')}>
           <Hash size={15} aria-hidden />
           {t('slackApp')}
         </a>

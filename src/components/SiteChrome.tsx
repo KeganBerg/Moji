@@ -53,11 +53,11 @@ export function SiteFooter() {
     <footer className="footer">
       <p>{t('footerNote')}</p>
       <nav className="footer-links" aria-label={t('siteLinks')}>
-        <a href="/guides">{t('guides')}</a>
-        <a href="/slack">{t('slackApp')}</a>
-        <a href="/faq">{t('faq')}</a>
-        <a href="/privacy">{t('privacy')}</a>
-        <a href="/terms">{t('terms')}</a>
+        <a href="/guides/">{t('guides')}</a>
+        <a href="/slack/">{t('slackApp')}</a>
+        <a href="/faq/">{t('faq')}</a>
+        <a href="/privacy/">{t('privacy')}</a>
+        <a href="/terms/">{t('terms')}</a>
         <a href={FEEDBACK_URL}>{t('sendFeedback')}</a>
         <a href={SUPPORT_URL}>{t('support')}</a>
       </nav>
