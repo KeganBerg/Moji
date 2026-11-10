@@ -149,6 +149,13 @@ export function suggestCutout(d: Uint8ClampedArray, width: number, height: numbe
 export type Box = { x: number; y: number; w: number; h: number }
 
 /**
+ * Shaded share a cut-out subject needs to count as a photo in strict mode.
+ * Measured on the test set: photos 0.51 to 0.84, a grunge-brush logo 0.29,
+ * a product shot 0.28, flat artwork 0.14 or less.
+ */
+const STRICT_SHADED = 0.45
+
+/**
  * A plain band around a photo (a screenshot's black bars, a white mat), as the
  * box of the photo inside it. Null when there's no band, or when what it
  * surrounds doesn't fill the box out to its edges (a logo on white).
@@ -197,7 +204,13 @@ export function findFrame(d: Uint8ClampedArray, width: number, height: number): 
  * photo (fine shading and texture, many colors) rather than flat artwork.
  * Run on a small copy, about 96 px.
  */
-export function looksPhotographic(d: Uint8ClampedArray, width: number, height: number, box?: Box): boolean {
+export function looksPhotographic(
+  d: Uint8ClampedArray,
+  width: number,
+  height: number,
+  box?: Box,
+  { strict = false }: { strict?: boolean } = {},
+): boolean {
   const { x: bx, y: by, w: bw, h: bh } = box ?? { x: 0, y: 0, w: width, h: height }
   const bgs = borderPalette(d, width, height)
   const tol = toleranceFor(DEFAULT_STRENGTH)
@@ -217,6 +230,9 @@ export function looksPhotographic(d: Uint8ClampedArray, width: number, height: n
       if (step > 6 && step < 48) shaded++
     }
   if (subject < 200) return false
+  // Strict: only clear photos (fur, faces, grass shade almost every pixel; a
+  // textured logo or a smooth product shot doesn't come close).
+  if (strict) return shaded / subject >= STRICT_SHADED
   // Leans toward photo: the model copes with artwork, but cutting a photo by color eats into it.
   return shaded / subject >= 0.3 || colors.size >= 120
 }

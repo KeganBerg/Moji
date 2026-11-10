@@ -596,7 +596,6 @@ export function uploadPlan(img: CanvasImageSource & { width: number; height: num
     }
   }
   // Try it: a one-color image or a full-bleed tile would be erased entirely.
-  const photo = looksPhotographic(d, w, h)
   removeBackground(d, w, h, DEFAULT_STRENGTH)
   let kept = 0
   for (let i = 3; i < d.length; i += 4) if (d[i] > 128) kept++
@@ -604,7 +603,9 @@ export function uploadPlan(img: CanvasImageSource & { width: number; height: num
   if (share < 0.03 || share > 0.9) return { cutout: false, segment: true }
   // A photo on a plain backdrop still has shadows and dark or light parts that
   // match the backdrop, so the model cuts it; flat artwork is cut by color.
-  return { cutout: true, segment: photo }
+  // Judged on what the color cut kept, and strictly: a logo on a grunge brush
+  // (PR #52) must stay with the color cut, which knows how to remove brush smears.
+  return { cutout: true, segment: looksPhotographic(d, w, h, undefined, { strict: true }) }
 }
 
 /** An image's pixels, shrunk so its longest side is at most `size`. */

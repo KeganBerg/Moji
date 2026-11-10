@@ -358,6 +358,21 @@ describe('background cutout', () => {
     expect(looksPhotographic(logo.d, 96, 96)).toBe(false)
   })
 
+  it('only calls a cut-out subject a photo in strict mode when nearly all of it is shaded', () => {
+    // A logo with a rough, inked texture (Tommy Doyles on a brush): some shading, mostly flat fill.
+    const inked = canvas(96, (x, y) => (inDisc(x, y, 48, 48, 30) ? (y % 6 ? [230, 120, 40] : [242, 128, 44]) : 0))
+    removeBackground(inked.d, 96, 96, DEFAULT_STRENGTH)
+    expect(looksPhotographic(inked.d, 96, 96)).toBe(true)
+    expect(looksPhotographic(inked.d, 96, 96, undefined, { strict: true })).toBe(false)
+    // Fur or a face on a plain backdrop: every pixel differs a little from its neighbors.
+    const photo = canvas(96, (x, y) => {
+      const n = ((x * 7919 + y * 104729) % 23) - 11
+      return inDisc(x, y, 48, 48, 30) ? [150 + n, 120 + n, 90 + n] : 0
+    })
+    removeBackground(photo.d, 96, 96, DEFAULT_STRENGTH)
+    expect(looksPhotographic(photo.d, 96, 96, undefined, { strict: true })).toBe(true)
+  })
+
   it('removes a baked-in light checkerboard', () => {
     // Web "transparent" PNGs often have the white and light grey squares saved into the pixels.
     const c = canvas(64, (x, y) => (inDisc(x, y, 32, 32, 18) ? [200, 40, 40] : ((x >> 3) + (y >> 3)) % 2 ? 204 : 255))
