@@ -39,7 +39,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: (
       <>
         In Slack, open the emoji picker, choose <strong>Add Emoji</strong>, upload the downloaded file and give it a
-        name. Some workspaces only let admins add emoji. The <a href="/guides/slack-emoji-size">Slack guide</a> covers
+        name. Some workspaces only let admins add emoji. The <a href="/guides/slack-emoji-size/">Slack guide</a> covers
         the details.
       </>
     ),
@@ -50,7 +50,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
       <>
         Open <strong>Server Settings → Emoji</strong> and choose <strong>Upload Emoji</strong>. You need the Manage
         Expressions permission. Sending animated emoji needs Nitro. The{' '}
-        <a href="/guides/add-custom-emoji-to-discord">Discord guide</a> has the full steps.
+        <a href="/guides/add-custom-emoji-to-discord/">Discord guide</a> has the full steps.
       </>
     ),
   },
@@ -82,7 +82,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: (
       <>
         Uploads never leave your browser. AI-generated images are cached so the same description returns instantly. See
-        the <a href="/privacy">privacy policy</a> for details.
+        the <a href="/privacy/">privacy policy</a> for details.
       </>
     ),
   },
@@ -250,7 +250,7 @@ const BASE_PAGES: Record<string, Page> = {
         <p>
           The Slack app shares the website's daily AI limits, counted per Slack user. It receives your description and
           your workspace and user IDs, which it hashes to enforce limits. It can't read your messages or channels. See
-          the <a href="/privacy">privacy policy</a> for details.
+          the <a href="/privacy/">privacy policy</a> for details.
         </p>
         <h2>Support</h2>
         <p>
@@ -309,7 +309,7 @@ export const NOT_FOUND_PAGE: Page = {
   heading: 'Page not found',
   lede: (
     <>
-      That link may be mistyped or out of date. Try the <a href="/">editor</a> or the <a href="/guides">guides</a>.
+      That link may be mistyped or out of date. Try the <a href="/">editor</a> or the <a href="/guides/">guides</a>.
     </>
   ),
   body: null,

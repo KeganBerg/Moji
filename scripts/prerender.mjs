@@ -28,7 +28,7 @@ function fill(html, { description, url, body }) {
 
 for (const key of pages) {
   const { description, html } = render(key)
-  const url = `${SITE}/${key}`
+  const url = `${SITE}/${key}/`
   await mkdir(join(dist, key), { recursive: true })
   await writeFile(join(dist, key, 'index.html'), fill(template, { description, url, body: html }))
 }
@@ -46,7 +46,7 @@ for (const key of pages) {
   await writeFile(join(dist, '404.html'), page)
 }
 
-const urls = ['', ...pages].map((p) => `  <url><loc>${SITE}/${p}</loc></url>`).join('\n')
+const urls = ['', ...pages].map((p) => `  <url><loc>${SITE}/${p ? `${p}/` : ''}</loc></url>`).join('\n')
 await writeFile(
   join(dist, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`,

@@ -264,7 +264,7 @@ export const GUIDES: Guide[] = [
         <p>
           Dark Halloween art with glows and gradients makes heavier GIFs than flat colors. Moji Locker's export trims
           colors and frames until the file fits Slack's 128 KB or Discord's 256 KB, but a transparent background and a
-          single motion keep more detail. The <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains
+          single motion keep more detail. The <a href="/guides/animated-slack-emoji/">animated emoji guide</a> explains
           the tradeoffs.
         </p>
         <p>
@@ -327,7 +327,7 @@ export const GUIDES: Guide[] = [
           Grain and noise change pixels in every frame, so deep-fried GIFs get bigger than clean ones. Moji Locker's
           export trims colors first, then frames, until the file fits Slack's 128 KB or Discord's 256 KB. If it has to
           cut too much, lower Chaos a little or drop to a single motion. The{' '}
-          <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains the tradeoffs.
+          <a href="/guides/animated-slack-emoji/">animated emoji guide</a> explains the tradeoffs.
         </p>
         <Cta>Deep-fry an emoji →</Cta>
       </>
@@ -472,8 +472,8 @@ export const GUIDES: Guide[] = [
         <p>
           Slack names use lowercase letters, numbers, hyphens and underscores. Pick names people will guess, like{' '}
           <code>:shipped_it:</code>, <code>:on_it:</code> and <code>:big_brain:</code>. A shared prefix groups a set in
-          the picker. The <a href="/guides/slack-emoji-size">Slack emoji size guide</a> covers the size limit and how to
-          upload.
+          the picker. The <a href="/guides/slack-emoji-size/">Slack emoji size guide</a> covers the size limit and how
+          to upload.
         </p>
         <Cta>Make a work emoji →</Cta>
       </>
@@ -533,7 +533,7 @@ export const GUIDES: Guide[] = [
         </table>
         <p>
           Photos have more colors than cartoons, so animated versions are heavier. The export trims colors and frames
-          until the file fits, and the <a href="/guides/animated-slack-emoji">animated emoji guide</a> explains how to
+          until the file fits, and the <a href="/guides/animated-slack-emoji/">animated emoji guide</a> explains how to
           keep more detail.
         </p>
         <Cta>Turn a photo into an emoji →</Cta>
@@ -550,7 +550,7 @@ const GUIDES_INDEX: Page = {
     <ul className="guide-list">
       {GUIDES.map((g) => (
         <li key={g.slug}>
-          <a href={`/guides/${g.slug}`}>
+          <a href={`/guides/${g.slug}/`}>
             <strong>{g.heading}</strong>
             <span>{g.description}</span>
           </a>
